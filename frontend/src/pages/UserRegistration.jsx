@@ -43,12 +43,19 @@ const UserRegistration = () => {
     setSuccess('');
 
     try {
-      const response = await fetch('/api/user-registration', {
+      const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          full_name: formData.fullName,
+          designation: formData.designation,
+          email: formData.email,
+          mobile: formData.mobile,
+          business_name: formData.businessName,
+          business_type: formData.businessType
+        })
       });
 
       const data = await response.json();
@@ -77,7 +84,7 @@ const UserRegistration = () => {
     setError('');
 
     try {
-      const response = await fetch('/api/verify-user', {
+      const response = await fetch('/api/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
