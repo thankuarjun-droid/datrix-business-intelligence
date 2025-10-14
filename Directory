@@ -1,3 +1,0 @@
-cd /home/ubuntu/datrix-complete-system
-git remote add origin https://github.com/YOUR_USERNAME/datrix-business-intelligence.git
-git push -u origin main
