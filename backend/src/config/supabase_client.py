@@ -104,9 +104,17 @@ def get_supabase_client() -> Optional[SupabaseClient]:
     global _supabase_client
     
     if _supabase_client is None:
+        # Try environment variables first
         url = os.getenv('SUPABASE_URL')
         key = os.getenv('SUPABASE_KEY')
         service_key = os.getenv('SUPABASE_SERVICE_KEY')
+        
+        # Fallback to hardcoded credentials for deployment
+        if not url or not key:
+            url = 'https://vboauggpscnkgsqwfccg.supabase.co'
+            key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZib2F1Z2dwc2Nua2dzcXdmY2NnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMzQ4MzAsImV4cCI6MjA3NTkxMDgzMH0.HagbaNRnqpRR3OiZF6KIZ8ZJTGk7oE6oF8_xYweBUSk'
+            service_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZib2F1Z2dwc2Nua2dzcXdmY2NnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDMzNDgzMCwiZXhwIjoyMDc1OTEwODMwfQ.1FDyPCK6hRdy8I_YAbpamkYWJa7q4-AWi5vyeiZQREM'
+            print("Using hardcoded Supabase credentials")
         
         if url and key:
             _supabase_client = SupabaseClient(url, key, service_key)
