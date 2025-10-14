@@ -19,6 +19,7 @@ import random
 import string
 from datetime import datetime
 from src.config.supabase_client import get_supabase_client
+from src.services.email_service import get_email_service
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'datrix-professional-secret-key-2024')
@@ -81,6 +82,14 @@ def register_user():
         result = supabase.insert('users', user_data)
         
         if result and 'error' not in result:
+            # Send verification email
+            email_service = get_email_service()
+            email_service.send_verification_email(
+                data['email'],
+                data['full_name'],
+                verification_code
+            )
+            
             return jsonify({
                 'success': True,
                 'message': 'Registration successful. Please verify your account.',
@@ -237,6 +246,16 @@ def approve_user(user_id):
         result = supabase.update('users', update_data, {'id': user_id}, use_service_key=True)
         
         if result and 'error' not in result:
+            # Send approval email
+            email_service = get_email_service()
+            assessment_url = f"{os.getenv('APP_URL', 'https://vgh0i1c3lzj5.manus.space')}/assessment?token={assessment_token}"
+            email_service.send_approval_email(
+                user.get('email'),
+                user.get('full_name'),
+                assessment_token,
+                assessment_url
+            )
+            
             # Log the action
             log_data = {
                 'user_id': user_id,

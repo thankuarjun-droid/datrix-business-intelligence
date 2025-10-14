@@ -17,6 +17,7 @@ const UserRegistration = () => {
   const [success, setSuccess] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [displayCode, setDisplayCode] = useState('');
+  const [userId, setUserId] = useState('');
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -61,6 +62,7 @@ const UserRegistration = () => {
       const data = await response.json();
 
       if (response.ok) {
+        setUserId(data.user_id);
         setDisplayCode(data.verification_code || '123456');
         setSuccess('Registration successful! Please check your email and SMS for verification code.');
         setStep(2);
@@ -90,7 +92,7 @@ const UserRegistration = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: formData.email,
+          user_id: userId,
           verification_code: verificationCode
         })
       });
