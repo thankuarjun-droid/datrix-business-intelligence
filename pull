@@ -1,3 +1,1 @@
-cd /home/ubuntu/datrix-complete-system
-gh auth login
-gh repo create datrix-business-intelligence --public --source=. --description="Datrix™ Business Intelligence Scanner - Complete system for garment manufacturing industry assessment" --push
+
