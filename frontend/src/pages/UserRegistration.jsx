@@ -58,22 +58,35 @@ const UserRegistration = () => {
 
       if (result.success) {
         // Send verification email
-        await sendVerificationEmail(
-          result.user.email,
+        const emailResult = await sendVerificationEmail(
+          result.email,
           result.verificationCode,
-          result.user.full_name
+          formData.fullName
         );
+
+        if (!emailResult.success) {
+          console.warn('Email sending failed:', emailResult.error);
+          // Continue anyway - user can still verify
+        }
 
         // Navigate to verification page with user data
         navigate('/verify', {
           state: {
-            email: result.user.email,
-            name: result.user.full_name,
-            userId: result.user.id
+            email: result.email,
+            name: formData.fullName,
+            userId: result.userId
           }
         });
       } else {
-        setError(result.error || 'Registration failed. Please try again.');
+        // Handle specific error messages
+        let errorMessage = result.error || 'Registration failed. Please try again.';
+        
+        // Check for duplicate email error
+        if (errorMessage.includes('duplicate') || errorMessage.includes('users_email_key')) {
+          errorMessage = 'This email address is already registered. Please use a different email or contact support.';
+        }
+        
+        setError(errorMessage);
       }
     } catch (err) {
       console.error('Registration error:', err);
