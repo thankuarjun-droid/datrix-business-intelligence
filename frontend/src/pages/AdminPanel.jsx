@@ -15,7 +15,7 @@ import {
   Activity
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = '/api';
 
 const AdminPanel = () => {
   const [stats, setStats] = useState({
@@ -38,18 +38,25 @@ const AdminPanel = () => {
     try {
       setLoading(true);
       
-      // Fetch dashboard stats
-      const statsResponse = await fetch(`${API_URL}/admin/dashboard-stats`);
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        setStats(statsData.stats || {});
-      }
-      
       // Fetch all users
       const usersResponse = await fetch(`${API_URL}/admin/users`);
       if (usersResponse.ok) {
         const usersData = await usersResponse.json();
-        setUsers(usersData.users || []);
+        const usersList = usersData.users || [];
+        setUsers(usersList);
+        
+        // Calculate stats from users data
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        const calculatedStats = {
+          pending_users: usersList.filter(u => u.status === 'pending').length,
+          verified_users: usersList.filter(u => u.status === 'verified').length,
+          approved_users: usersList.filter(u => u.is_approved).length,
+          new_users_last_7_days: usersList.filter(u => new Date(u.created_at) > sevenDaysAgo).length,
+          assessments_last_30_days: 0
+        };
+        setStats(calculatedStats);
       }
       
       // Fetch assessments

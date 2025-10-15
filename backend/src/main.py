@@ -14,6 +14,7 @@ if env_path.exists():
                 os.environ[key.strip()] = value.strip()
 
 from flask import Flask, send_from_directory, jsonify, request
+from routes.enhanced_routes import enhanced_bp
 from flask_cors import CORS
 import random
 import string
@@ -22,6 +23,7 @@ from src.config.supabase_client import get_supabase_client
 from src.services.email_service import get_email_service
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
+app.register_blueprint(enhanced_bp)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'datrix-professional-secret-key-2024')
 
 # Enable CORS for all routes
