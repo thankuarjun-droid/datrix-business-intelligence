@@ -1,0 +1,10 @@
+{
+  "name": "datrix-api",
+  "version": "1.0.0",
+  "description": "Datrix Business Intelligence Scanner - Serverless API Functions",
+  "type": "module",
+  "dependencies": {
+    "resend": "^4.0.0"
+  }
+}
+
