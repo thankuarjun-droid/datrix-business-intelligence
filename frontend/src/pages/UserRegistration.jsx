@@ -48,12 +48,12 @@ const UserRegistration = () => {
     try {
       // Register user with Supabase
       const result = await registerUser({
-        full_name: formData.fullName,
+        fullName: formData.fullName,
         designation: formData.designation,
         email: formData.email,
         mobile: formData.mobile,
-        business_name: formData.businessName,
-        business_type: formData.businessType
+        businessName: formData.businessName,
+        businessType: formData.businessType
       });
 
       if (result.success) {
