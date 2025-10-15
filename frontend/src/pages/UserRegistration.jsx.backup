@@ -1,0 +1,44 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { User, Building, Mail, Phone, Loader2 } from 'lucide-react';
+import { registerUser } from '../services/userService';
+import { sendVerificationEmail } from '../services/emailService';
+
+const UserRegistration = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const [formData, setFormData] = useState({
+    fullName: '',
+    designation: '',
+    email: '',
+    mobile: '',
+    businessName: '',
+    businessType: 'Garment Manufacturing',
+    privacyConsent: false
+  });
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleRegistration = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    // Validation
+    if (!formData.privacyConsent) {
+      setError('Please accept the privacy policy to continue');
+      setLoading(false

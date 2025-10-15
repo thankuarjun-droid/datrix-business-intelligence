@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { apiUrl } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
+import { registerUser } from '../services/userService';
+import { sendVerificationEmail } from '../services/emailService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -45,37 +46,38 @@ const UserRegistration = () => {
     setSuccess('');
 
     try {
-      const response = await fetch(apiUrl('/api/register'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          full_name: formData.fullName,
-          designation: formData.designation,
-          email: formData.email,
-          mobile: formData.mobile,
-          business_name: formData.businessName,
-          business_type: formData.businessType
-        })
+      // Register user with Supabase
+      const result = await registerUser({
+        full_name: formData.fullName,
+        designation: formData.designation,
+        email: formData.email,
+        mobile: formData.mobile,
+        business_name: formData.businessName,
+        business_type: formData.businessType
       });
 
-      const data = await response.json();
+      if (result.success) {
+        // Send verification email
+        await sendVerificationEmail(
+          result.user.email,
+          result.verificationCode,
+          result.user.full_name
+        );
 
-      if (response.ok) {
-        setUserId(data.user_id);
-        setDisplayCode(data.verification_code || '123456');
-        setSuccess('Registration successful! Please check your email and SMS for verification code.');
-        setStep(2);
+        // Navigate to verification page with user data
+        navigate('/verify', {
+          state: {
+            email: result.user.email,
+            name: result.user.full_name,
+            userId: result.user.id
+          }
+        });
       } else {
-        setError(data.message || 'Registration failed. Please try again.');
+        setError(result.error || 'Registration failed. Please try again.');
       }
     } catch (err) {
       console.error('Registration error:', err);
-      // For demo purposes, simulate successful registration
-      setDisplayCode('123456');
-      setSuccess('Registration successful! Please check your email and SMS for verification code.');
-      setStep(2);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
