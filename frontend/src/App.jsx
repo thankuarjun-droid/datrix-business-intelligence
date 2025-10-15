@@ -5,7 +5,7 @@ import UserRegistration from './pages/UserRegistration';
 import Assessment from './pages/Assessment';
 import Results from './pages/Results';
 import PrivacyPolicy from './pages/PrivacyPolicy';
-import AdminPanel from './pages/AdminPanel';
+import AdminPanelComplete from './pages/AdminPanelComplete';
 import './App.css';
 
 function App() {
@@ -18,7 +18,7 @@ function App() {
           <Route path="/assessment" element={<Assessment />} />
           <Route path="/results" element={<Results />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/admin" element={<AdminPanelComplete />} />
         </Routes>
       </div>
     </Router>

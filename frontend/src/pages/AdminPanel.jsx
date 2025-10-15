@@ -56,6 +56,8 @@ const AdminPanel = () => {
           new_users_last_7_days: usersList.filter(u => new Date(u.created_at) > sevenDaysAgo).length,
           assessments_last_30_days: 0
         };
+        console.log('Calculated Stats:', calculatedStats);
+        console.log('Users List:', usersList);
         setStats(calculatedStats);
       }
       
