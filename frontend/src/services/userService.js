@@ -42,7 +42,7 @@ export const registerUser = async (userData) => {
       verification_code_expiry: verificationExpiry.toISOString(),
       is_verified: false,
       is_approved: false,
-      status: 'pending_verification',
+      status: 'pending',
       created_at: new Date().toISOString(),
     };
 
@@ -127,7 +127,7 @@ export const verifyUser = async (email, code) => {
       .from('users')
       .update({
         is_verified: true,
-        status: 'pending_approval',
+        status: 'verified',
         verified_at: new Date().toISOString(),
       })
       .eq('id', user.id)
