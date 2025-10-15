@@ -13,7 +13,18 @@ from datetime import datetime, timedelta
 import json
 
 app = Flask(__name__, static_folder='../static')
-CORS(app)
+
+# CORS Configuration - Allow frontend domains
+CORS(app, resources={r"/api/*": {
+    "origins": [
+        "https://datrix-business-intelligence.vercel.app",
+        "https://datrix.navvicorp.com",
+        "http://localhost:5173",
+        "http://localhost:3000"
+    ],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization"]
+}})
 
 # Supabase Configuration
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://vboauggpscnkgsqwfccg.supabase.co')
