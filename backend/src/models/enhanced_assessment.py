@@ -2065,3 +2065,6 @@ def calculate_assessment_score(answers):
         "pillar_scores": pillar_scores
     }
 
+
+# Export for API use
+ENHANCED_ASSESSMENT_QUESTIONS = ASSESSMENT_FRAMEWORK
