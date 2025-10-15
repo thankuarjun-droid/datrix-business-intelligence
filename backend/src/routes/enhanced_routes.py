@@ -5,7 +5,6 @@ Enhanced API routes for Datrix™ with professional reporting
 from flask import Blueprint, request, jsonify, send_file
 from src.config.supabase_client import SupabaseClient
 from src.services.report_generator import ReportGenerator
-from src.services.pdf_service import PDFReportGenerator
 from src.models.enhanced_assessment import ENHANCED_ASSESSMENT_QUESTIONS
 import os
 import uuid
@@ -112,7 +111,6 @@ def download_pdf_report(assessment_id):
         report_data = ReportGenerator.generate_report_data(user_data, assessment_data)
         
         # Generate PDF
-        pdf_generator = PDFReportGenerator()
         pdf_filename = f"Datrix_Report_{user_data.get('business_name', 'Company').replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf"
         pdf_path = f"/tmp/{pdf_filename}"
         
