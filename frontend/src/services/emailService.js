@@ -2,13 +2,23 @@
  * Email Service
  * Handles sending verification emails and notifications
  * 
+ * Email Strategy:
+ * - Internal communications (verification, admin): arjunm@navvicorp.com
+ * - Client-facing (assessment links, reports): datrix@navvicorp.com
+ * 
  * Note: This is a client-side placeholder. In production, email sending should be done
  * via a backend API to keep API keys secure and prevent abuse.
  */
 
 // Email configuration
-const SENDER_EMAIL = 'arjunm@navvicorp.com';
-const SENDER_NAME = 'Arjun M - Datrix™ | Navvi Corporation';
+// Internal communications (verification, admin notifications)
+const INTERNAL_SENDER_EMAIL = 'arjunm@navvicorp.com';
+const INTERNAL_SENDER_NAME = 'Arjun M - Datrix™ | Navvi Corporation';
+
+// Client-facing communications (assessment links, reports)
+const CLIENT_SENDER_EMAIL = 'datrix@navvicorp.com';
+const CLIENT_SENDER_NAME = 'Datrix™ Business Intelligence Scanner';
+
 const COMPANY_NAME = 'Navvi Corporation';
 
 /**
@@ -26,7 +36,7 @@ export const sendVerificationEmail = async (email, code, name) => {
     console.log('='.repeat(60));
     console.log('📧 VERIFICATION EMAIL');
     console.log('='.repeat(60));
-    console.log(`From: ${SENDER_NAME} <${SENDER_EMAIL}>`);
+    console.log(`From: ${INTERNAL_SENDER_NAME} <${INTERNAL_SENDER_EMAIL}>`);
     console.log(`To: ${email}`);
     console.log(`Subject: Verify Your Email - Datrix™ Business Intelligence Scanner`);
     console.log(`Name: ${name}`);
@@ -51,9 +61,9 @@ an email with your personalized assessment link within 1-2 hours.
 If you did not request this verification, please ignore this email.
 
 Best regards,
-${SENDER_NAME}
+${INTERNAL_SENDER_NAME}
 ${COMPANY_NAME}
-Email: ${SENDER_EMAIL}
+Email: ${INTERNAL_SENDER_EMAIL}
     `);
     console.log('='.repeat(60));
 
@@ -86,7 +96,7 @@ export const sendVerificationSMS = async (mobile, code) => {
     console.log('='.repeat(60));
     console.log('📱 VERIFICATION SMS');
     console.log('='.repeat(60));
-    console.log(`From: ${SENDER_NAME}`);
+    console.log(`From: ${INTERNAL_SENDER_NAME}`);
     console.log(`To: ${mobile}`);
     console.log(`Message: Your Datrix™ verification code is: ${code}. Valid for 15 minutes.`);
     console.log('='.repeat(60));
@@ -109,6 +119,7 @@ export const sendVerificationSMS = async (mobile, code) => {
 
 /**
  * Send approval email with assessment link
+ * Uses CLIENT email (datrix@navvicorp.com) for professional client communication
  * @param {string} email - Recipient email address
  * @param {string} name - User's name
  * @param {string} assessmentLink - Unique assessment link
@@ -117,9 +128,9 @@ export const sendVerificationSMS = async (mobile, code) => {
 export const sendApprovalEmail = async (email, name, assessmentLink) => {
   try {
     console.log('='.repeat(60));
-    console.log('📧 APPROVAL EMAIL');
+    console.log('📧 APPROVAL EMAIL (CLIENT-FACING)');
     console.log('='.repeat(60));
-    console.log(`From: ${SENDER_NAME} <${SENDER_EMAIL}>`);
+    console.log(`From: ${CLIENT_SENDER_NAME} <${CLIENT_SENDER_EMAIL}>`);
     console.log(`To: ${email}`);
     console.log(`Subject: Your Datrix™ Assessment is Ready!`);
     console.log(`Name: ${name}`);
@@ -156,9 +167,9 @@ Upon completion, you'll receive:
 If you have any questions, feel free to reply to this email.
 
 Best regards,
-${SENDER_NAME}
+${CLIENT_SENDER_NAME}
 ${COMPANY_NAME}
-Email: ${SENDER_EMAIL}
+Email: ${CLIENT_SENDER_EMAIL}
     `);
     console.log('='.repeat(60));
 
@@ -180,6 +191,7 @@ Email: ${SENDER_EMAIL}
 
 /**
  * Send rejection email
+ * Uses INTERNAL email for administrative communication
  * @param {string} email - Recipient email address
  * @param {string} name - User's name
  * @param {string} reason - Rejection reason
@@ -190,7 +202,7 @@ export const sendRejectionEmail = async (email, name, reason) => {
     console.log('='.repeat(60));
     console.log('📧 REJECTION EMAIL');
     console.log('='.repeat(60));
-    console.log(`From: ${SENDER_NAME} <${SENDER_EMAIL}>`);
+    console.log(`From: ${INTERNAL_SENDER_NAME} <${INTERNAL_SENDER_EMAIL}>`);
     console.log(`To: ${email}`);
     console.log(`Subject: Datrix™ Registration Update`);
     console.log(`Name: ${name}`);
@@ -212,9 +224,9 @@ If you believe this is an error or would like to discuss this further, please do
 hesitate to contact us.
 
 Best regards,
-${SENDER_NAME}
+${INTERNAL_SENDER_NAME}
 ${COMPANY_NAME}
-Email: ${SENDER_EMAIL}
+Email: ${INTERNAL_SENDER_EMAIL}
     `);
     console.log('='.repeat(60));
 
@@ -236,6 +248,7 @@ Email: ${SENDER_EMAIL}
 
 /**
  * Send assessment completion email with report
+ * Uses CLIENT email (datrix@navvicorp.com) for professional client communication
  * @param {string} email - Recipient email address
  * @param {string} name - User's name
  * @param {string} reportUrl - URL to download report
@@ -245,9 +258,9 @@ Email: ${SENDER_EMAIL}
 export const sendReportEmail = async (email, name, reportUrl, summary) => {
   try {
     console.log('='.repeat(60));
-    console.log('📧 REPORT EMAIL');
+    console.log('📧 REPORT EMAIL (CLIENT-FACING)');
     console.log('='.repeat(60));
-    console.log(`From: ${SENDER_NAME} <${SENDER_EMAIL}>`);
+    console.log(`From: ${CLIENT_SENDER_NAME} <${CLIENT_SENDER_EMAIL}>`);
     console.log(`To: ${email}`);
     console.log(`Subject: Your Datrix™ Business Health Report is Ready`);
     console.log(`Name: ${name}`);
@@ -287,9 +300,9 @@ Reply to this email to book a session.
 Thank you for using Datrix™ Business Intelligence Scanner!
 
 Best regards,
-${SENDER_NAME}
+${CLIENT_SENDER_NAME}
 ${COMPANY_NAME}
-Email: ${SENDER_EMAIL}
+Email: ${CLIENT_SENDER_EMAIL}
     `);
     console.log('='.repeat(60));
 
