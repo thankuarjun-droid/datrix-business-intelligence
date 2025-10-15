@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../utils/api';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const AssessmentComplete = () => {
@@ -24,7 +25,7 @@ const AssessmentComplete = () => {
   
   const fetchAssessmentQuestions = async () => {
     try {
-      const response = await fetch(`/api/assessment/questions?token=${token}`);
+      const response = await fetch(apiUrl(`/api/assessment/questions?token=${token}`));
       const data = await response.json();
       
       if (response.ok) {
@@ -89,7 +90,7 @@ const AssessmentComplete = () => {
     setSubmitting(true);
     
     try {
-      const response = await fetch('/api/assessment/submit', {
+      const response = await fetch(apiUrl('/api/assessment/submit'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

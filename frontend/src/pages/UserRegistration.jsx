@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiUrl } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,7 +45,7 @@ const UserRegistration = () => {
     setSuccess('');
 
     try {
-      const response = await fetch('/api/register', {
+      const response = await fetch(apiUrl('/api/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +87,7 @@ const UserRegistration = () => {
     setError('');
 
     try {
-      const response = await fetch('/api/verify', {
+      const response = await fetch(apiUrl('/api/verify'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

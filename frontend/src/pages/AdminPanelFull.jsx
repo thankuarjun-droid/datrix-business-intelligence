@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../utils/api';
 
 const AdminPanelFull = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -15,9 +16,9 @@ const AdminPanelFull = () => {
   const fetchAllData = async () => {
     try {
       const [usersRes, assessmentsRes, questionsRes] = await Promise.all([
-        fetch('/api/admin/users'),
-        fetch('/api/admin/assessments'),
-        fetch('/api/admin/questions')
+        fetch(apiUrl('/api/admin/users')),
+        fetch(apiUrl('/api/admin/assessments')),
+        fetch(apiUrl('/api/admin/questions'))
       ]);
       
       const usersData = await usersRes.json();
@@ -37,7 +38,7 @@ const AdminPanelFull = () => {
   
   const approveUser = async (userId) => {
     try {
-      const response = await fetch(`/api/admin/approve-user/${userId}`, {
+      const response = await fetch(apiUrl(`/api/admin/approve-user/${userId}`), {
         method: 'POST'
       });
       

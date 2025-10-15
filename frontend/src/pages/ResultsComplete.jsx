@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../utils/api';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const ResultsComplete = () => {
