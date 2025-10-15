@@ -14,7 +14,7 @@ if env_path.exists():
                 os.environ[key.strip()] = value.strip()
 
 from flask import Flask, send_from_directory, jsonify, request
-from routes.enhanced_routes import enhanced_bp
+from src.routes.enhanced_routes import enhanced_bp
 from flask_cors import CORS
 import random
 import string
