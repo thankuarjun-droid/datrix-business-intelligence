@@ -6,6 +6,8 @@ import Assessment from './pages/AssessmentComplete';
 import Results from './pages/ResultsComplete';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import AdminPanelComplete from './pages/AdminPanelComplete';
+import Verification from './pages/Verification';
+import VerificationSuccess from './pages/VerificationSuccess';
 import './App.css';
 
 function App() {
@@ -19,6 +21,8 @@ function App() {
           <Route path="/results" element={<Results />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/admin" element={<AdminPanelComplete />} />
+          <Route path="/verify" element={<Verification />} />
+          <Route path="/verification-success" element={<VerificationSuccess />} />
         </Routes>
       </div>
     </Router>
