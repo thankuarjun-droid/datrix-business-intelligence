@@ -11,7 +11,7 @@ const LandingPage = () => {
   const features = [
     {
       icon: <CheckCircle className="w-8 h-8 text-blue-600" />,
-      title: "27 Questions",
+      title: "67 Questions",
       subtitle: "Comprehensive",
       description: "Comprehensive assessment covering all critical business areas"
     },
@@ -39,7 +39,7 @@ const LandingPage = () => {
     {
       icon: <Users className="w-6 h-6 text-blue-600" />,
       title: "Comprehensive Assessment",
-      description: "27 diagnostic questions across 5 key business areas with evidence-based validation"
+      description: "67 diagnostic questions across 6 key business pillars with evidence-based validation"
     },
     {
       icon: <BarChart3 className="w-6 h-6 text-green-600" />,
@@ -67,7 +67,7 @@ const LandingPage = () => {
     {
       number: "2", 
       title: "Assessment",
-      description: "Answer 27 diagnostic questions across 5 key business areas"
+      description: "Answer 67 diagnostic questions across 6 key business pillars"
     },
     {
       number: "3",
