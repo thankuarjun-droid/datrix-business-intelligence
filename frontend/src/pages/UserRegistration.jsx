@@ -46,6 +46,9 @@ const UserRegistration = () => {
     setSuccess('');
 
     try {
+      console.log('=== Starting registration process ===');
+      console.log('Form data:', formData);
+      
       // Register user with Supabase
       const result = await registerUser({
         fullName: formData.fullName,
@@ -55,6 +58,8 @@ const UserRegistration = () => {
         businessName: formData.businessName,
         businessType: formData.businessType
       });
+
+      console.log('Registration result:', result);
 
       if (result.success) {
         // Send verification email
@@ -87,10 +92,11 @@ const UserRegistration = () => {
         }
         
         setError(errorMessage);
-      }
-    } catch (err) {
-      console.error('Registration error:', err);
-      setError('An unexpected error occurred. Please try again.');
+      }    } catch (error) {
+      console.error('=== REGISTRATION ERROR ===');
+      console.error('Error object:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);    setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
