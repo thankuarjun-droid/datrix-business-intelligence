@@ -1,0 +1,9 @@
+{
+  "name": "datrix-business-intelligence",
+  "version": "1.0.0",
+  "description": "Datrix Business Intelligence Scanner - Complete System",
+  "dependencies": {
+    "resend": "^4.0.0"
+  }
+}
+

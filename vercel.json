@@ -3,7 +3,7 @@
   "buildCommand": "cd frontend && pnpm install && pnpm run build",
   "outputDirectory": "frontend/dist",
   "functions": {
-    "api/**/*.js": {
+    "api/*.js": {
       "runtime": "nodejs20.x"
     }
   },
