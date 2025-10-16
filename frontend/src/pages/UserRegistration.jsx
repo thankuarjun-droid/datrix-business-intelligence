@@ -62,24 +62,37 @@ const UserRegistration = () => {
       console.log('Registration result:', result);
 
       if (result.success) {
+        console.log('✅ User registered successfully:', result);
+        
         // Send verification email with additional user data
-        const emailResult = await sendVerificationEmail(
-          result.email,
-          result.verificationCode,
-          formData.fullName,
-          {
-            mobile: result.mobile,
-            businessName: formData.businessName,
-            designation: formData.designation,
-          }
-        );
+        try {
+          console.log('📧 Attempting to send verification email...');
+          const emailResult = await sendVerificationEmail(
+            result.email,
+            result.verificationCode,
+            formData.fullName,
+            {
+              mobile: result.mobile,
+              businessName: formData.businessName,
+              designation: formData.designation,
+            }
+          );
+          
+          console.log('📧 Email result:', emailResult);
 
-        if (!emailResult.success) {
-          console.warn('Email sending failed:', emailResult.error);
+          if (!emailResult.success) {
+            console.warn('⚠️ Email sending failed:', emailResult.error);
+            // Continue anyway - user can still verify
+          } else {
+            console.log('✅ Verification email sent successfully!');
+          }
+        } catch (emailError) {
+          console.error('❌ Email sending exception:', emailError);
           // Continue anyway - user can still verify
         }
 
         // Navigate to verification page with user data
+        console.log('🔄 Navigating to verification page...');
         navigate('/verify', {
           state: {
             email: result.email,
