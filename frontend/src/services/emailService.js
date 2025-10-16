@@ -1,17 +1,20 @@
 /**
- * Email Service using EmailJS
+ * Email Service using EmailJS (CDN version)
  * Handles sending verification emails, approval notifications, and reports
  */
-
-import { init, send } from '@emailjs/browser';
 
 // EmailJS configuration
 const EMAILJS_PUBLIC_KEY = 'WY720kjd7SMzxiTW5';
 const EMAILJS_SERVICE_ID = 'service_e2bwzgq';
 const EMAILJS_TEMPLATE_ID = 'template_mtz49co';
 
-// Initialize EmailJS
-init(EMAILJS_PUBLIC_KEY);
+// Initialize EmailJS when the script loads
+if (typeof window !== 'undefined' && window.emailjs) {
+  window.emailjs.init(EMAILJS_PUBLIC_KEY);
+  console.log('✅ EmailJS initialized from CDN');
+} else {
+  console.warn('⚠️ EmailJS CDN not loaded yet');
+}
 
 /**
  * Send verification email to user
@@ -23,6 +26,11 @@ init(EMAILJS_PUBLIC_KEY);
  */
 export const sendVerificationEmail = async (email, verificationCode, userName, additionalData = {}) => {
   try {
+    // Check if EmailJS is available
+    if (typeof window === 'undefined' || !window.emailjs) {
+      throw new Error('EmailJS library not loaded');
+    }
+
     console.log('📧 EmailJS: Preparing to send email...');
     console.log('Email:', email);
     console.log('Verification Code:', verificationCode);
@@ -41,7 +49,7 @@ export const sendVerificationEmail = async (email, verificationCode, userName, a
 
     console.log('📧 EmailJS: Sending with params:', templateParams);
 
-    const response = await send(
+    const response = await window.emailjs.send(
       EMAILJS_SERVICE_ID,
       EMAILJS_TEMPLATE_ID,
       templateParams
