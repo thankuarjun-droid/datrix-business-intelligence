@@ -62,11 +62,16 @@ const UserRegistration = () => {
       console.log('Registration result:', result);
 
       if (result.success) {
-        // Send verification email
+        // Send verification email with additional user data
         const emailResult = await sendVerificationEmail(
           result.email,
           result.verificationCode,
-          formData.fullName
+          formData.fullName,
+          {
+            mobile: result.mobile,
+            businessName: formData.businessName,
+            designation: formData.designation,
+          }
         );
 
         if (!emailResult.success) {

@@ -1,43 +1,62 @@
 /**
  * Email Service
- * Handles sending verification emails and notifications via serverless API
+ * Handles sending verification emails and notifications via EmailJS
  * 
  * Email Strategy:
  * - Internal communications (verification, admin): arjunm@navvicorp.com
  * - Client-facing (assessment links, reports): datrix@navvicorp.com
  */
 
+import emailjs from '@emailjs/browser';
+
+// EmailJS configuration
+const EMAILJS_PUBLIC_KEY = 'WY720kjd7SMzxiTW5';
+const EMAILJS_SERVICE_ID = 'service_e2bwzgq';
+const EMAILJS_TEMPLATE_ID = 'kvu8suj';
+
+// Initialize EmailJS
+emailjs.init(EMAILJS_PUBLIC_KEY);
+
 /**
  * Send verification code via email
  * @param {string} email - Recipient email address
  * @param {string} code - Verification code
  * @param {string} name - User's name
+ * @param {Object} userData - Additional user data (mobile, businessName, designation)
  * @returns {Promise<Object>} Send result
  */
-export const sendVerificationEmail = async (email, code, name) => {
+export const sendVerificationEmail = async (email, code, name, userData = {}) => {
   try {
-    const response = await fetch('/api/send-verification', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, code, name }),
-    });
+    const templateParams = {
+      user_email: email,
+      user_name: name || 'User',
+      verification_code: code,
+      user_mobile: userData.mobile || '',
+      business_name: userData.businessName || '',
+      user_designation: userData.designation || '',
+      to_email: email,
+    };
 
-    const data = await response.json();
+    console.log('📧 Sending verification email via EmailJS:', { email, code });
 
-    if (!response.ok) {
-      console.error('API error:', data);
+    const response = await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      EMAILJS_TEMPLATE_ID,
+      templateParams
+    );
+
+    console.log('✅ EmailJS response:', response);
+
+    if (response.status === 200) {
       return {
-        success: false,
-        error: data.error || 'Failed to send verification email',
+        success: true,
+        message: 'Verification email sent successfully',
       };
+    } else {
+      throw new Error(`EmailJS returned status: ${response.status}`);
     }
-
-    console.log('✅ Verification email sent successfully:', data);
-    return data;
   } catch (error) {
-    console.error('Email sending error:', error);
+    console.error('❌ Email sending error:', error);
     return {
       success: false,
       error: error.message || 'Failed to send verification email',
@@ -89,28 +108,31 @@ export const sendVerificationSMS = async (mobile, code) => {
  */
 export const sendApprovalEmail = async (email, name, assessmentLink) => {
   try {
-    const response = await fetch('/api/send-approval', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, name, assessmentLink }),
-    });
+    const templateParams = {
+      user_email: email,
+      user_name: name || 'User',
+      verification_code: `APPROVED - Link: ${assessmentLink}`,
+      to_email: email,
+    };
 
-    const data = await response.json();
+    console.log('📧 Sending approval email via EmailJS:', { email });
 
-    if (!response.ok) {
-      console.error('API error:', data);
+    const response = await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      EMAILJS_TEMPLATE_ID,
+      templateParams
+    );
+
+    if (response.status === 200) {
       return {
-        success: false,
-        error: data.error || 'Failed to send approval email',
+        success: true,
+        message: 'Approval email sent successfully',
       };
+    } else {
+      throw new Error(`EmailJS returned status: ${response.status}`);
     }
-
-    console.log('✅ Approval email sent successfully:', data);
-    return data;
   } catch (error) {
-    console.error('Email sending error:', error);
+    console.error('❌ Email sending error:', error);
     return {
       success: false,
       error: error.message || 'Failed to send approval email',
@@ -162,28 +184,31 @@ export const sendRejectionEmail = async (email, name, reason) => {
  */
 export const sendReportEmail = async (email, name, reportUrl, summary) => {
   try {
-    const response = await fetch('/api/send-report', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, name, reportUrl, summary }),
-    });
+    const templateParams = {
+      user_email: email,
+      user_name: name || 'User',
+      verification_code: `REPORT - Score: ${summary?.score || 'N/A'}`,
+      to_email: email,
+    };
 
-    const data = await response.json();
+    console.log('📧 Sending report email via EmailJS:', { email });
 
-    if (!response.ok) {
-      console.error('API error:', data);
+    const response = await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      EMAILJS_TEMPLATE_ID,
+      templateParams
+    );
+
+    if (response.status === 200) {
       return {
-        success: false,
-        error: data.error || 'Failed to send report email',
+        success: true,
+        message: 'Report email sent successfully',
       };
+    } else {
+      throw new Error(`EmailJS returned status: ${response.status}`);
     }
-
-    console.log('✅ Report email sent successfully:', data);
-    return data;
   } catch (error) {
-    console.error('Email sending error:', error);
+    console.error('❌ Email sending error:', error);
     return {
       success: false,
       error: error.message || 'Failed to send report email',
