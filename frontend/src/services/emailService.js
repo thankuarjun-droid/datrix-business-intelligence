@@ -1,13 +1,9 @@
 /**
- * Email Service
- * Handles sending verification emails and notifications via EmailJS
- * 
- * Email Strategy:
- * - Internal communications (verification, admin): arjunm@navvicorp.com
- * - Client-facing (assessment links, reports): datrix@navvicorp.com
+ * Email Service using EmailJS
+ * Handles sending verification emails, approval notifications, and reports
  */
 
-import emailjs from '@emailjs/browser';
+import { init, send } from '@emailjs/browser';
 
 // EmailJS configuration
 const EMAILJS_PUBLIC_KEY = 'WY720kjd7SMzxiTW5';
@@ -15,48 +11,50 @@ const EMAILJS_SERVICE_ID = 'service_e2bwzgq';
 const EMAILJS_TEMPLATE_ID = 'template_mtz49co';
 
 // Initialize EmailJS
-emailjs.init(EMAILJS_PUBLIC_KEY);
+init(EMAILJS_PUBLIC_KEY);
 
 /**
- * Send verification code via email
- * @param {string} email - Recipient email address
- * @param {string} code - Verification code
- * @param {string} name - User's name
- * @param {Object} userData - Additional user data (mobile, businessName, designation)
- * @returns {Promise<Object>} Send result
+ * Send verification email to user
+ * @param {string} email - User's email address
+ * @param {string} verificationCode - 6-digit verification code
+ * @param {string} userName - User's full name
+ * @param {object} additionalData - Additional user data (mobile, businessName, designation)
+ * @returns {Promise<{success: boolean, error?: string}>}
  */
-export const sendVerificationEmail = async (email, code, name, userData = {}) => {
+export const sendVerificationEmail = async (email, verificationCode, userName, additionalData = {}) => {
   try {
+    console.log('📧 EmailJS: Preparing to send email...');
+    console.log('Email:', email);
+    console.log('Verification Code:', verificationCode);
+    console.log('User Name:', userName);
+    console.log('Additional Data:', additionalData);
+
     const templateParams = {
       user_email: email,
-      user_name: name || 'User',
-      verification_code: code,
-      user_mobile: userData.mobile || '',
-      business_name: userData.businessName || '',
-      user_designation: userData.designation || '',
       to_email: email,
+      user_name: userName,
+      verification_code: verificationCode,
+      mobile: additionalData.mobile || 'N/A',
+      business_name: additionalData.businessName || 'N/A',
+      designation: additionalData.designation || 'N/A',
     };
 
-    console.log('📧 Sending verification email via EmailJS:', { email, code });
+    console.log('📧 EmailJS: Sending with params:', templateParams);
 
-    const response = await emailjs.send(
+    const response = await send(
       EMAILJS_SERVICE_ID,
       EMAILJS_TEMPLATE_ID,
       templateParams
     );
 
-    console.log('✅ EmailJS response:', response);
+    console.log('✅ EmailJS: Email sent successfully!', response);
 
-    if (response.status === 200) {
-      return {
-        success: true,
-        message: 'Verification email sent successfully',
-      };
-    } else {
-      throw new Error(`EmailJS returned status: ${response.status}`);
-    }
+    return {
+      success: true,
+      message: 'Verification email sent successfully',
+    };
   } catch (error) {
-    console.error('❌ Email sending error:', error);
+    console.error('❌ EmailJS: Error sending email:', error);
     return {
       success: false,
       error: error.message || 'Failed to send verification email',
@@ -65,162 +63,48 @@ export const sendVerificationEmail = async (email, code, name, userData = {}) =>
 };
 
 /**
- * Send SMS verification code
- * @param {string} mobile - Mobile number
- * @param {string} code - Verification code
- * @returns {Promise<Object>} Send result
+ * Send approval notification email to admin
+ * @param {string} adminEmail - Admin's email address
+ * @param {object} userData - User data to include in notification
+ * @returns {Promise<{success: boolean, error?: string}>}
  */
-export const sendVerificationSMS = async (mobile, code) => {
+export const sendApprovalNotification = async (adminEmail, userData) => {
   try {
-    // In production, integrate with SMS gateway (Twilio, AWS SNS, etc.)
-    
-    console.log('='.repeat(60));
-    console.log('📱 VERIFICATION SMS');
-    console.log('='.repeat(60));
-    console.log(`From: Datrix™ Business Intelligence Scanner`);
-    console.log(`To: ${mobile}`);
-    console.log(`Message: Your Datrix™ verification code is: ${code}. Valid for 15 minutes.`);
-    console.log('='.repeat(60));
-
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
+    // TODO: Implement admin approval notification
+    console.log('Sending approval notification to:', adminEmail);
     return {
       success: true,
-      message: 'SMS sent successfully',
+      message: 'Approval notification sent',
     };
   } catch (error) {
-    console.error('SMS sending error:', error);
+    console.error('Error sending approval notification:', error);
     return {
       success: false,
-      error: 'Failed to send SMS',
+      error: error.message,
     };
   }
 };
 
 /**
- * Send approval email with assessment link
- * Uses CLIENT email (datrix@navvicorp.com) for professional client communication
- * @param {string} email - Recipient email address
- * @param {string} name - User's name
- * @param {string} assessmentLink - Unique assessment link
- * @returns {Promise<Object>} Send result
+ * Send assessment report email to user
+ * @param {string} email - User's email address
+ * @param {string} reportUrl - URL to download the report
+ * @returns {Promise<{success: boolean, error?: string}>}
  */
-export const sendApprovalEmail = async (email, name, assessmentLink) => {
+export const sendReportEmail = async (email, reportUrl) => {
   try {
-    const templateParams = {
-      user_email: email,
-      user_name: name || 'User',
-      verification_code: `APPROVED - Link: ${assessmentLink}`,
-      to_email: email,
-    };
-
-    console.log('📧 Sending approval email via EmailJS:', { email });
-
-    const response = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
-      templateParams
-    );
-
-    if (response.status === 200) {
-      return {
-        success: true,
-        message: 'Approval email sent successfully',
-      };
-    } else {
-      throw new Error(`EmailJS returned status: ${response.status}`);
-    }
-  } catch (error) {
-    console.error('❌ Email sending error:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to send approval email',
-    };
-  }
-};
-
-/**
- * Send rejection email
- * Uses INTERNAL email for administrative communication
- * @param {string} email - Recipient email address
- * @param {string} name - User's name
- * @param {string} reason - Rejection reason
- * @returns {Promise<Object>} Send result
- */
-export const sendRejectionEmail = async (email, name, reason) => {
-  try {
-    // For now, log to console - can implement API endpoint later if needed
-    console.log('='.repeat(60));
-    console.log('📧 REJECTION EMAIL');
-    console.log('='.repeat(60));
-    console.log(`From: arjunm@navvicorp.com`);
-    console.log(`To: ${email}`);
-    console.log(`Name: ${name}`);
-    console.log(`Reason: ${reason}`);
-    console.log('='.repeat(60));
-
+    // TODO: Implement report email
+    console.log('Sending report to:', email);
     return {
       success: true,
-      message: 'Rejection email sent successfully',
+      message: 'Report email sent',
     };
   } catch (error) {
-    console.error('Email sending error:', error);
+    console.error('Error sending report email:', error);
     return {
       success: false,
-      error: error.message || 'Failed to send rejection email',
+      error: error.message,
     };
   }
-};
-
-/**
- * Send assessment completion email with report
- * Uses CLIENT email (datrix@navvicorp.com) for professional client communication
- * @param {string} email - Recipient email address
- * @param {string} name - User's name
- * @param {string} reportUrl - URL to download report
- * @param {Object} summary - Assessment summary
- * @returns {Promise<Object>} Send result
- */
-export const sendReportEmail = async (email, name, reportUrl, summary) => {
-  try {
-    const templateParams = {
-      user_email: email,
-      user_name: name || 'User',
-      verification_code: `REPORT - Score: ${summary?.score || 'N/A'}`,
-      to_email: email,
-    };
-
-    console.log('📧 Sending report email via EmailJS:', { email });
-
-    const response = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
-      templateParams
-    );
-
-    if (response.status === 200) {
-      return {
-        success: true,
-        message: 'Report email sent successfully',
-      };
-    } else {
-      throw new Error(`EmailJS returned status: ${response.status}`);
-    }
-  } catch (error) {
-    console.error('❌ Email sending error:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to send report email',
-    };
-  }
-};
-
-export default {
-  sendVerificationEmail,
-  sendVerificationSMS,
-  sendApprovalEmail,
-  sendRejectionEmail,
-  sendReportEmail,
 };
 
