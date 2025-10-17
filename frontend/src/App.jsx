@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import UserRegistration from './pages/UserRegistration';
 import Assessment from './pages/AssessmentComplete';
-import AssessmentToken from './pages/AssessmentToken';
+import AssessmentToken from './pages/AssessmentTokenEnhanced';
 import AssessmentAccess from './pages/AssessmentAccess';
 import Results from './pages/ResultsComplete';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -46,5 +46,5 @@ function App() {
 
 export default App;
 
-// Token-based assessment system deployed - Oct 17, 2025 13:22 IST
+// Enhanced UX/UI with 5-option scale and color highlighting - Oct 17, 2025 16:30 IST
 
