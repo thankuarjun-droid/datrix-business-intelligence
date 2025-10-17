@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import UserRegistration from './pages/UserRegistration';
 import Assessment from './pages/AssessmentComplete';
-import AssessmentFinal from './pages/AssessmentFinal';
+import AssessmentV2 from './pages/AssessmentV2';
 import AssessmentAccess from './pages/AssessmentAccess';
 import Results from './pages/ResultsComplete';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -24,7 +24,7 @@ function App() {
           
           {/* Token-Based Assessment Flow (New System) */}
           <Route path="/assess/:token" element={<AssessmentAccess />} />
-          <Route path="/assessment" element={<AssessmentFinal />} />
+          <Route path="/assessment" element={<AssessmentV2 />} />
           
           {/* Legacy Routes (Old System - Keep for backward compatibility) */}
           <Route path="/register" element={<UserRegistration />} />
