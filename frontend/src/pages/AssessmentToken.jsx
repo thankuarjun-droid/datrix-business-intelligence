@@ -21,6 +21,7 @@ const AssessmentToken = () => {
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [error, setError] = useState(null);
 
   // Get token and invitation from session or location state
   const token = sessionStorage.getItem('assessment_token') || location.state?.token;
@@ -39,12 +40,17 @@ const AssessmentToken = () => {
 
   const createOrGetUser = async () => {
     try {
+      if (!invitation || !invitation.client_email) {
+        console.error('No invitation data found');
+        return;
+      }
+
       // Check if user already exists with this email
       const { data: existingUser, error: fetchError } = await supabase
         .from('users')
         .select('id')
         .eq('email', invitation.client_email)
-        .single();
+        .maybeSingle();
 
       if (existingUser) {
         setUserId(existingUser.id);
@@ -67,26 +73,46 @@ const AssessmentToken = () => {
 
         if (insertError) {
           console.error('Error creating user:', insertError);
+          // Continue anyway - we can still save responses without user_id
         } else {
           setUserId(newUser.id);
         }
       }
     } catch (error) {
       console.error('Error in createOrGetUser:', error);
+      // Continue anyway
     }
   };
 
   const loadAssessmentQuestions = async () => {
     try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch questions with category information
       const { data, error } = await supabase
         .from('assessment_questions')
-        .select('*')
-        .order('category', { ascending: true })
-        .order('question_order', { ascending: true });
+        .select(`
+          *,
+          assessment_categories (
+            id,
+            name,
+            description
+          )
+        `)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
 
       if (error) {
         console.error('Error loading questions:', error);
-        alert('Failed to load assessment questions');
+        setError('Failed to load assessment questions. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        setError('No assessment questions found. Please contact support.');
+        setLoading(false);
         return;
       }
 
@@ -95,34 +121,29 @@ const AssessmentToken = () => {
       // Group questions by category
       const categoryMap = {};
       data.forEach(question => {
-        if (!categoryMap[question.category]) {
-          categoryMap[question.category] = {
-            name: question.category,
-            description: getCategoryDescription(question.category),
+        const categoryName = question.assessment_categories?.name || 'General';
+        const categoryDesc = question.assessment_categories?.description || '';
+        
+        if (!categoryMap[categoryName]) {
+          categoryMap[categoryName] = {
+            name: categoryName,
+            description: categoryDesc,
             questions: []
           };
         }
-        categoryMap[question.category].questions.push(question);
+        categoryMap[categoryName].questions.push(question);
       });
 
-      setCategories(Object.values(categoryMap));
+      const categoriesArray = Object.values(categoryMap);
+      setCategories(categoriesArray);
       setLoading(false);
+
+      console.log(`Loaded ${data.length} questions across ${categoriesArray.length} categories`);
     } catch (error) {
       console.error('Error loading questions:', error);
-      alert('Failed to load assessment questions');
+      setError('Failed to load assessment questions. Please try again.');
+      setLoading(false);
     }
-  };
-
-  const getCategoryDescription = (category) => {
-    const descriptions = {
-      'Strategic Planning': 'Evaluate your strategic vision, planning processes, and long-term business objectives',
-      'Operations Excellence': 'Assess operational efficiency, quality control, and production management',
-      'Financial Management': 'Review financial planning, cost control, and profitability metrics',
-      'Sales & Marketing': 'Analyze sales strategies, market positioning, and customer relationships',
-      'Human Resources': 'Examine workforce management, talent development, and organizational culture',
-      'Technology & Innovation': 'Evaluate technology adoption, digital transformation, and innovation capabilities'
-    };
-    return descriptions[category] || 'Assessment questions for this business pillar';
   };
 
   const handleResponseChange = (questionId, value) => {
@@ -134,7 +155,7 @@ const AssessmentToken = () => {
 
   const currentCategory = categories[currentCategoryIndex];
   const totalCategories = categories.length;
-  const progress = ((currentCategoryIndex + 1) / totalCategories) * 100;
+  const progress = totalCategories > 0 ? ((currentCategoryIndex + 1) / totalCategories) * 100 : 0;
 
   const isCurrentCategoryComplete = () => {
     if (!currentCategory) return false;
@@ -149,75 +170,109 @@ const AssessmentToken = () => {
     return questions.length;
   };
 
-  const handleNext = () => {
-    if (!isCurrentCategoryComplete()) {
-      alert('Please answer all questions in this section before proceeding');
-      return;
-    }
-
+  const handleNextCategory = () => {
     if (currentCategoryIndex < totalCategories - 1) {
       setCurrentCategoryIndex(prev => prev + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
     }
   };
 
-  const handlePrevious = () => {
+  const handlePreviousCategory = () => {
     if (currentCategoryIndex > 0) {
       setCurrentCategoryIndex(prev => prev - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
     }
   };
 
-  const handleSubmit = async () => {
-    if (!isCurrentCategoryComplete()) {
-      alert('Please answer all questions in this section before submitting');
-      return;
-    }
-
-    const totalQuestions = getTotalQuestions();
-    const answeredQuestions = getTotalAnswered();
-
-    if (answeredQuestions < totalQuestions) {
-      alert(`Please answer all questions. ${answeredQuestions}/${totalQuestions} answered.`);
-      return;
-    }
-
-    if (!confirm('Are you sure you want to submit your assessment? You cannot modify your answers after submission.')) {
+  const handleSubmitAssessment = async () => {
+    if (getTotalAnswered() < getTotalQuestions()) {
+      alert(`Please answer all questions before submitting. You have answered ${getTotalAnswered()} out of ${getTotalQuestions()} questions.`);
       return;
     }
 
     setSubmitting(true);
 
     try {
-      // Save all responses to database
-      const responseRecords = Object.entries(responses).map(([questionId, score]) => ({
-        user_id: userId,
+      // If we don't have a userId, try to create one now
+      let finalUserId = userId;
+      if (!finalUserId && invitation && invitation.client_email) {
+        const { data: newUser, error: userError } = await supabase
+          .from('users')
+          .insert([
+            {
+              name: invitation.client_name,
+              email: invitation.client_email,
+              mobile: invitation.client_mobile || '',
+              company_name: invitation.company_name,
+              is_verified: true,
+              verification_token: token
+            }
+          ])
+          .select()
+          .single();
+
+        if (!userError && newUser) {
+          finalUserId = newUser.id;
+          setUserId(newUser.id);
+        }
+      }
+
+      if (!finalUserId) {
+        alert('Unable to create user record. Please try again or contact support.');
+        setSubmitting(false);
+        return;
+      }
+
+      // Create assessment record
+      const { data: assessment, error: assessmentError } = await supabase
+        .from('assessments')
+        .insert({
+          user_id: finalUserId,
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (assessmentError) {
+        console.error('Error creating assessment:', assessmentError);
+        alert('Failed to save assessment. Please try again.');
+        setSubmitting(false);
+        return;
+      }
+
+      // Save all responses
+      const responseRecords = Object.entries(responses).map(([questionId, value]) => ({
+        assessment_id: assessment.id,
         question_id: questionId,
-        score: score
+        response_value: value
       }));
 
-      const { error: responseError } = await supabase
+      const { error: responsesError } = await supabase
         .from('assessment_responses')
         .insert(responseRecords);
 
-      if (responseError) {
-        console.error('Error saving responses:', responseError);
-        alert('Failed to save assessment responses');
+      if (responsesError) {
+        console.error('Error saving responses:', responsesError);
+        alert('Failed to save responses. Please try again.');
         setSubmitting(false);
         return;
       }
 
       // Mark token as completed
-      await markTokenCompleted(token, userId);
+      if (token) {
+        await markTokenCompleted(token, finalUserId);
+      }
 
       // Navigate to results
-      navigate('/results', { 
-        state: { 
-          userId,
-          fromAssessment: true 
-        } 
+      navigate('/results', {
+        state: {
+          assessmentId: assessment.id,
+          userId: finalUserId,
+          responses: responses,
+          questions: questions
+        }
       });
-
     } catch (error) {
       console.error('Error submitting assessment:', error);
       alert('Failed to submit assessment. Please try again.');
@@ -227,15 +282,30 @@ const AssessmentToken = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
-            <div className="flex flex-col items-center justify-center py-8">
-              <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Assessment</h3>
-              <p className="text-sm text-gray-600 text-center">
-                Preparing your assessment questions...
-              </p>
+            <div className="flex flex-col items-center space-y-4">
+              <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Loading Assessment</h2>
+              <p className="text-gray-600 text-center">Preparing your assessment questions...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center space-y-4">
+              <AlertCircle className="h-12 w-12 text-red-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Error Loading Assessment</h2>
+              <p className="text-gray-600 text-center">{error}</p>
+              <Button onClick={() => window.location.reload()}>Try Again</Button>
             </div>
           </CardContent>
         </Card>
@@ -245,15 +315,15 @@ const AssessmentToken = () => {
 
   if (!currentCategory) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                No assessment questions found. Please contact support.
-              </AlertDescription>
-            </Alert>
+            <div className="flex flex-col items-center space-y-4">
+              <AlertCircle className="h-12 w-12 text-yellow-600" />
+              <h2 className="text-xl font-semibold text-gray-900">No Questions Available</h2>
+              <p className="text-gray-600 text-center">No assessment questions found. Please contact support.</p>
+              <Button onClick={() => navigate('/')}>Go Home</Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -261,170 +331,138 @@ const AssessmentToken = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       {/* Header */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <img src={navviLogo} alt="Navvi Logo" className="h-8" />
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <img src={navviLogo} alt="Navvi Logo" className="h-10 w-10" />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Datrix™ Assessment</h1>
-                <p className="text-sm text-gray-600">{invitation.company_name}</p>
+                <p className="text-sm text-gray-600">{invitation?.company_name || 'Business Assessment'}</p>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-sm text-gray-600">Progress</div>
-              <div className="text-lg font-bold text-blue-600">
-                {currentCategoryIndex + 1} / {totalCategories}
-              </div>
+              <p className="text-sm font-medium text-gray-900">
+                {getTotalAnswered()} / {getTotalQuestions()}
+              </p>
+              <p className="text-xs text-gray-600">Questions Answered</p>
             </div>
           </div>
-          <Progress value={progress} className="h-2" />
+          <div className="mt-4">
+            <Progress value={progress} className="h-2" />
+            <p className="text-xs text-gray-600 mt-1">
+              Section {currentCategoryIndex + 1} of {totalCategories}
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Category Header */}
-        <Card className="mb-6 border-blue-200 bg-blue-50">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl text-blue-900">
-                  {currentCategory.name}
-                </CardTitle>
-                <CardDescription className="text-blue-700 mt-2">
-                  {currentCategory.description}
-                </CardDescription>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-blue-600">
-                  {currentCategoryIndex + 1}
-                </div>
-                <div className="text-sm text-blue-700">of {totalCategories}</div>
-              </div>
-            </div>
+            <CardTitle className="text-2xl">{currentCategory.name}</CardTitle>
+            <CardDescription>{currentCategory.description}</CardDescription>
           </CardHeader>
-        </Card>
-
-        {/* Questions */}
-        <div className="space-y-6 mb-8">
-          {currentCategory.questions.map((question, index) => (
-            <Card key={question.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="text-lg text-gray-900 mb-2">
-                      {question.question_text}
-                    </CardTitle>
-                    {question.description && (
-                      <CardDescription className="text-gray-600">
-                        {question.description}
-                      </CardDescription>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
+          <CardContent className="space-y-6">
+            {currentCategory.questions.map((question, index) => (
+              <div key={question.id} className="border-b border-gray-200 pb-6 last:border-0">
+                <Label className="text-base font-medium text-gray-900 mb-4 block">
+                  {index + 1}. {question.question_text}
+                </Label>
+                {question.help_text && (
+                  <p className="text-sm text-gray-600 mb-3">{question.help_text}</p>
+                )}
                 <RadioGroup
                   value={responses[question.id]?.toString()}
                   onValueChange={(value) => handleResponseChange(question.id, value)}
-                  className="space-y-3"
                 >
-                  {[
-                    { value: '5', label: 'Strongly Agree / Excellent', color: 'text-green-700' },
-                    { value: '4', label: 'Agree / Good', color: 'text-blue-700' },
-                    { value: '3', label: 'Neutral / Average', color: 'text-yellow-700' },
-                    { value: '2', label: 'Disagree / Poor', color: 'text-orange-700' },
-                    { value: '1', label: 'Strongly Disagree / Very Poor', color: 'text-red-700' }
-                  ].map((option) => (
-                    <div key={option.value} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                      <RadioGroupItem value={option.value} id={`${question.id}-${option.value}`} />
-                      <Label 
-                        htmlFor={`${question.id}-${option.value}`} 
-                        className={`flex-1 cursor-pointer font-medium ${option.color}`}
-                      >
-                        {option.label}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-gray-50 cursor-pointer">
+                      <RadioGroupItem value="1" id={`${question.id}-1`} />
+                      <Label htmlFor={`${question.id}-1`} className="cursor-pointer flex-1">
+                        <span className="font-medium">1</span>
+                        <span className="text-xs text-gray-600 block">Poor</span>
                       </Label>
                     </div>
-                  ))}
+                    <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-gray-50 cursor-pointer">
+                      <RadioGroupItem value="2" id={`${question.id}-2`} />
+                      <Label htmlFor={`${question.id}-2`} className="cursor-pointer flex-1">
+                        <span className="font-medium">2</span>
+                        <span className="text-xs text-gray-600 block">Fair</span>
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-gray-50 cursor-pointer">
+                      <RadioGroupItem value="3" id={`${question.id}-3`} />
+                      <Label htmlFor={`${question.id}-3`} className="cursor-pointer flex-1">
+                        <span className="font-medium">3</span>
+                        <span className="text-xs text-gray-600 block">Good</span>
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-gray-50 cursor-pointer">
+                      <RadioGroupItem value="4" id={`${question.id}-4`} />
+                      <Label htmlFor={`${question.id}-4`} className="cursor-pointer flex-1">
+                        <span className="font-medium">4</span>
+                        <span className="text-xs text-gray-600 block">Excellent</span>
+                      </Label>
+                    </div>
+                  </div>
                 </RadioGroup>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Progress Info */}
-        <Card className="mb-6 bg-gray-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <span className="text-gray-700">
-                  Questions Answered: <strong>{getTotalAnswered()}</strong> / {getTotalQuestions()}
-                </span>
               </div>
-              <div className="text-sm text-gray-600">
-                Section {currentCategoryIndex + 1} of {totalCategories}
-              </div>
-            </div>
+            ))}
           </CardContent>
         </Card>
 
-        {/* Navigation Buttons */}
-        <div className="flex items-center justify-between gap-4">
+        {/* Navigation */}
+        <div className="mt-6 flex items-center justify-between">
           <Button
             variant="outline"
-            onClick={handlePrevious}
+            onClick={handlePreviousCategory}
             disabled={currentCategoryIndex === 0}
-            className="flex items-center gap-2"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="mr-2 h-4 w-4" />
             Previous Section
           </Button>
 
+          {!isCurrentCategoryComplete() && (
+            <Alert className="flex-1 mx-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Please answer all questions in this section before proceeding.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {currentCategoryIndex < totalCategories - 1 ? (
             <Button
-              onClick={handleNext}
+              onClick={handleNextCategory}
               disabled={!isCurrentCategoryComplete()}
-              className="flex items-center gap-2"
             >
               Next Section
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
             <Button
-              onClick={handleSubmit}
+              onClick={handleSubmitAssessment}
               disabled={!isCurrentCategoryComplete() || submitting}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700"
             >
               {submitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Submitting...
                 </>
               ) : (
                 <>
-                  <CheckCircle className="w-4 h-4" />
+                  <CheckCircle className="mr-2 h-4 w-4" />
                   Submit Assessment
                 </>
               )}
             </Button>
           )}
         </div>
-
-        {!isCurrentCategoryComplete() && (
-          <Alert className="mt-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Please answer all questions in this section to proceed
-            </AlertDescription>
-          </Alert>
-        )}
       </div>
     </div>
   );
