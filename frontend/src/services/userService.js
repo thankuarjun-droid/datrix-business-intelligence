@@ -83,6 +83,12 @@ export const registerUser = async (userData) => {
  */
 export const verifyUser = async (email, code) => {
   try {
+    console.log('=== VERIFICATION DEBUG START ===');
+    console.log('Input email:', email);
+    console.log('Input code:', code);
+    console.log('Input code type:', typeof code);
+    console.log('Input code length:', code ? code.length : 0);
+
     // Find user by email
     const { data: user, error: fetchError } = await supabase
       .from('users')
@@ -90,37 +96,91 @@ export const verifyUser = async (email, code) => {
       .eq('email', email.toLowerCase())
       .single();
 
-    if (fetchError || !user) {
+    if (fetchError) {
+      console.error('Fetch error:', fetchError);
+      return {
+        success: false,
+        error: `User lookup failed: ${fetchError.message}`,
+      };
+    }
+
+    if (!user) {
+      console.error('User not found for email:', email);
       return {
         success: false,
         error: 'User not found',
       };
     }
 
+    console.log('User found:', user.email);
+    console.log('User verification_code:', user.verification_code);
+    console.log('User verification_code type:', typeof user.verification_code);
+    console.log('User verification_code length:', user.verification_code ? user.verification_code.length : 0);
+    console.log('User is_verified:', user.is_verified);
+    console.log('User verification_code_expiry:', user.verification_code_expiry);
+
     // Check if already verified
     if (user.is_verified) {
+      console.log('User already verified');
       return {
         success: false,
         error: 'User already verified',
       };
     }
 
+    // Check if verification code exists
+    if (!user.verification_code) {
+      console.error('No verification code found for user');
+      return {
+        success: false,
+        error: 'No verification code found. Please request a new code.',
+      };
+    }
+
+    // Normalize codes for comparison (trim whitespace and ensure string type)
+    const userCode = String(user.verification_code || '').trim();
+    const inputCode = String(code || '').trim();
+
+    console.log('Normalized user code:', userCode);
+    console.log('Normalized input code:', inputCode);
+    console.log('Codes match:', userCode === inputCode);
+
     // Check if code matches
-    if (user.verification_code !== code) {
+    if (userCode !== inputCode) {
+      console.error('Code mismatch!');
+      console.error('Expected:', userCode);
+      console.error('Received:', inputCode);
       return {
         success: false,
         error: 'Invalid verification code',
       };
     }
 
+    // Check if verification_code_expiry exists
+    if (!user.verification_code_expiry) {
+      console.error('No expiry time set for verification code');
+      return {
+        success: false,
+        error: 'Verification code expiry not set. Please contact support.',
+      };
+    }
+
     // Check if code expired
     const expiryTime = new Date(user.verification_code_expiry);
-    if (expiryTime < new Date()) {
+    const now = new Date();
+    console.log('Expiry time:', expiryTime);
+    console.log('Current time:', now);
+    console.log('Is expired:', expiryTime < now);
+
+    if (expiryTime < now) {
+      console.error('Verification code expired');
       return {
         success: false,
         error: 'Verification code expired. Please request a new code.',
       };
     }
+
+    console.log('All checks passed, updating user...');
 
     // Update user as verified
     const { data: updatedUser, error: updateError } = await supabase
@@ -135,11 +195,15 @@ export const verifyUser = async (email, code) => {
       .single();
 
     if (updateError) {
+      console.error('Update error:', updateError);
       return {
         success: false,
-        error: 'Failed to verify user',
+        error: `Failed to verify user: ${updateError.message}`,
       };
     }
+
+    console.log('User verified successfully!');
+    console.log('=== VERIFICATION DEBUG END ===');
 
     return {
       success: true,
@@ -147,7 +211,7 @@ export const verifyUser = async (email, code) => {
       message: 'Email verified successfully! Your account is pending admin approval.',
     };
   } catch (error) {
-    console.error('Verification error:', error);
+    console.error('Verification exception:', error);
     return {
       success: false,
       error: error.message || 'Verification failed',
