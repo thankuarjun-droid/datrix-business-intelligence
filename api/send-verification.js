@@ -44,7 +44,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Datrix™ <onboarding@resend.dev>',
+        from: 'Datrix™ <noreply@navvicorp.com>',
         to: [email],
         subject: 'Welcome to Datrix™ - Verify Your Email',
         html: `
