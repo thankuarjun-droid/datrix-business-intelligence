@@ -1,20 +1,11 @@
 {
-  "version": 2,
   "buildCommand": "cd frontend && pnpm install && pnpm run build",
   "outputDirectory": "frontend/dist",
-  "functions": {
-    "api/*.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "rewrites": [
     {
       "source": "/((?!api/.*).*)",
       "destination": "/index.html"
     }
-  ],
-  "github": {
-    "silent": false
-  }
+  ]
 }
 
