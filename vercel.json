@@ -12,6 +12,9 @@
       "source": "/((?!api/.*).*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "github": {
+    "silent": false
+  }
 }
 
