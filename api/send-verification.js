@@ -1,8 +1,9 @@
-const { Resend } = require('resend');
+/**
+ * Serverless function to send verification emails via Resend API
+ * Uses fetch instead of Resend SDK for better compatibility
+ */
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -25,71 +26,94 @@ module.exports = async function handler(req, res) {
     });
   }
 
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  
+  if (!RESEND_API_KEY) {
+    console.error('RESEND_API_KEY environment variable is not set');
+    return res.status(500).json({
+      success: false,
+      error: 'Email service configuration error'
+    });
+  }
+
   try {
-    const { data, error } = await resend.emails.send({
-      from: 'Arjun M - Datrix™ <arjunm@navvicorp.com>',
-      to: [email],
-      subject: 'Verify Your Email - Datrix™ Business Intelligence Scanner',
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Verify Your Email</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">Datrix™</h1>
-            <p style="color: white; margin: 10px 0 0 0; font-size: 14px;">Business Intelligence Scanner</p>
-          </div>
-          
-          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-            <h2 style="color: #333; margin-top: 0;">Dear ${name},</h2>
-            
-            <p>Thank you for registering for the Datrix™ Business Intelligence Scanner!</p>
-            
-            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0;">
-              <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">Your verification code is:</p>
-              <div style="font-size: 36px; font-weight: bold; color: #667eea; letter-spacing: 8px; font-family: 'Courier New', monospace;">
-                ${code}
-              </div>
-              <p style="margin: 10px 0 0 0; color: #999; font-size: 12px;">This code will expire in 15 minutes</p>
-            </div>
-            
-            <p>Please enter this code on the verification page to complete your registration.</p>
-            
-            <p>Once verified, your account will be reviewed by our admin team and you will receive an email with your personalized assessment link within 1-2 hours.</p>
-            
-            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
-              <p style="margin: 0; color: #856404; font-size: 14px;">
-                <strong>⚠️ Security Note:</strong> If you did not request this verification, please ignore this email.
-              </p>
-            </div>
-            
-            <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
-            
-            <p style="color: #666; font-size: 14px; margin-bottom: 5px;">Best regards,</p>
-            <p style="color: #333; font-weight: bold; margin: 0;">Arjun M - Datrix™</p>
-            <p style="color: #666; font-size: 14px; margin: 5px 0;">Navvi Corporation</p>
-            <p style="color: #667eea; font-size: 14px; margin: 0;">
-              <a href="mailto:arjunm@navvicorp.com" style="color: #667eea; text-decoration: none;">arjunm@navvicorp.com</a>
-            </p>
-          </div>
-          
-          <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
-            <p>© 2025 Navvi Corporation. All rights reserved.</p>
-          </div>
-        </body>
-        </html>
-      `,
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Datrix™ <onboarding@resend.dev>',
+        to: [email],
+        subject: 'Welcome to Datrix™ - Verify Your Email',
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f7fa;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
+              <tr>
+                <td align="center">
+                  <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <tr>
+                      <td style="background: linear-gradient(135deg, #3B5998 0%, #2d4373 100%); padding: 40px 30px; text-align: center;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Datrix™</h1>
+                        <p style="color: #F7941D; margin: 10px 0 0 0; font-size: 14px; font-weight: 500;">Business Intelligence Scanner</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 40px 30px;">
+                        <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Welcome, ${name}!</h2>
+                        <p style="color: #666666; line-height: 1.6; margin: 0 0 20px 0; font-size: 16px;">
+                          Thank you for registering with Datrix™ Business Intelligence Scanner by Navvi Corporations.
+                        </p>
+                        <p style="color: #666666; line-height: 1.6; margin: 0 0 30px 0; font-size: 16px;">
+                          Your verification code is:
+                        </p>
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td align="center" style="padding: 0 0 30px 0;">
+                              <div style="display: inline-block; background-color: #f8f9fa; border: 2px solid #3B5998; border-radius: 8px; padding: 20px 40px;">
+                                <span style="font-size: 36px; font-weight: bold; color: #3B5998; letter-spacing: 8px;">${code}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        </table>
+                        <p style="color: #999999; line-height: 1.6; margin: 0; font-size: 14px; text-align: center;">
+                          This code will expire in 10 minutes.
+                        </p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="background-color: #f8f9fa; padding: 30px; text-align: center; border-top: 1px solid #e9ecef;">
+                        <p style="color: #3B5998; margin: 0 0 10px 0; font-size: 18px; font-weight: bold;">Navvi Corporations</p>
+                        <p style="color: #F7941D; margin: 0 0 15px 0; font-size: 14px; font-style: italic;">Cut Waste. Build Systems. Boost Profits.</p>
+                        <p style="color: #999999; margin: 0; font-size: 12px;">
+                          © ${new Date().getFullYear()} Navvi Corporations. All rights reserved.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>
+        `,
+      }),
     });
 
-    if (error) {
-      console.error('Resend API error:', error);
-      return res.status(400).json({ 
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Resend API error:', data);
+      return res.status(response.status).json({ 
         success: false,
-        error: error.message || 'Failed to send verification email' 
+        error: data.message || 'Failed to send verification email' 
       });
     }
 
@@ -97,7 +121,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ 
       success: true,
       message: 'Verification email sent successfully',
-      emailId: data?.id 
+      emailId: data.id 
     });
   } catch (error) {
     console.error('Email sending error:', error);
@@ -106,5 +130,5 @@ module.exports = async function handler(req, res) {
       error: error.message || 'Failed to send verification email' 
     });
   }
-};
+}
 
