@@ -390,6 +390,15 @@ const AssessmentFinal = () => {
                       </div>
                     </div>
                     
+                    {question.explanation && (
+                      <div className="ml-11 mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          <span className="font-semibold text-blue-900">Why this matters: </span>
+                          {question.explanation}
+                        </p>
+                      </div>
+                    )}
+                    
                     <div className="grid grid-cols-1 gap-3 ml-11">
                       {options.map((optionText, optionIndex) => {
                         const isSelected = responses[question.id] === optionIndex;
@@ -404,10 +413,10 @@ const AssessmentFinal = () => {
                             `}
                           >
                             <div className="flex items-center gap-3">
-                              <span className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${isSelected ? 'bg-white bg-opacity-30' : 'bg-gray-200'}`}>
-                                {optionIndex}
-                              </span>
                               <span className="flex-1">{optionText}</span>
+                              {isSelected && (
+                                <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                              )}
                             </div>
                           </button>
                         );
