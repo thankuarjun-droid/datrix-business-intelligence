@@ -10,9 +10,14 @@ import { verifyUser, resendVerificationCode } from '../services/userService';
 import { sendVerificationEmail } from '../services/emailService';
 
 export default function Verification() {
+  console.log('🔍 VERIFICATION COMPONENT LOADED - Version 2.0');
+  
   const navigate = useNavigate();
   const location = useLocation();
   const { email, name } = location.state || {};
+  
+  console.log('📧 Email from location.state:', email);
+  console.log('👤 Name from location.state:', name);
 
   const [verificationCode, setVerificationCode] = useState('');
   const [loading, setLoading] = useState(false);
