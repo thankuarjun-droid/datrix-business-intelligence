@@ -205,11 +205,94 @@ const AssessmentFinal = () => {
         return;
       }
 
+      // Calculate scoring metrics
+      const answersData = {};
+      const categoryScoresData = {};
+      let totalScore = 0;
+      let maxScore = 0;
+
+      // Process all responses and calculate scores by category
+      questions.forEach(q => {
+        const responseValue = responses[q.id] || 0;
+        const questionMaxScore = q.max_score || 4;
+        
+        answersData[q.id] = {
+          question_id: q.id,
+          question_text: q.question_text,
+          category: q.assessment_categories?.name || 'Unknown',
+          response_value: responseValue,
+          max_score: questionMaxScore
+        };
+        
+        totalScore += responseValue;
+        maxScore += questionMaxScore;
+        
+        // Aggregate by category
+        const categoryName = q.assessment_categories?.name || 'Unknown';
+        if (!categoryScoresData[categoryName]) {
+          categoryScoresData[categoryName] = {
+            score: 0,
+            max_score: 0,
+            questions_count: 0
+          };
+        }
+        categoryScoresData[categoryName].score += responseValue;
+        categoryScoresData[categoryName].max_score += questionMaxScore;
+        categoryScoresData[categoryName].questions_count += 1;
+      });
+
+      // Calculate percentage and grade
+      const percentage = maxScore > 0 ? ((totalScore / maxScore) * 100).toFixed(2) : 0;
+      let overallGrade = 'D';
+      if (percentage >= 85) overallGrade = 'A';
+      else if (percentage >= 70) overallGrade = 'B';
+      else if (percentage >= 55) overallGrade = 'C';
+
+      // Calculate category percentages
+      Object.keys(categoryScoresData).forEach(category => {
+        const catData = categoryScoresData[category];
+        catData.percentage = catData.max_score > 0 
+          ? ((catData.score / catData.max_score) * 100).toFixed(2) 
+          : 0;
+      });
+
+      // Generate recommendations based on scores
+      const recommendations = [];
+      Object.entries(categoryScoresData).forEach(([category, data]) => {
+        const catPercentage = parseFloat(data.percentage);
+        if (catPercentage < 60) {
+          recommendations.push({
+            category,
+            priority: 'High',
+            message: `${category} requires immediate attention with a score of ${catPercentage.toFixed(1)}%. Focus on strengthening core capabilities in this area.`
+          });
+        } else if (catPercentage < 75) {
+          recommendations.push({
+            category,
+            priority: 'Medium',
+            message: `${category} shows moderate performance at ${catPercentage.toFixed(1)}%. Consider targeted improvements to reach excellence.`
+          });
+        } else {
+          recommendations.push({
+            category,
+            priority: 'Low',
+            message: `${category} demonstrates strong performance at ${catPercentage.toFixed(1)}%. Maintain current practices and explore optimization opportunities.`
+          });
+        }
+      });
+
+      // Insert assessment with all required fields
       const { data: assessment, error: assessmentError } = await supabase
         .from('assessments')
         .insert({
           user_id: finalUserId,
-          status: 'completed',
+          answers: answersData,
+          total_score: totalScore,
+          max_score: maxScore,
+          percentage: parseFloat(percentage),
+          overall_grade: overallGrade,
+          category_scores: categoryScoresData,
+          recommendations: recommendations,
           completed_at: new Date().toISOString()
         })
         .select()
