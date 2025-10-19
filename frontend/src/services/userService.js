@@ -89,11 +89,23 @@ export const verifyUser = async (email, code) => {
     console.log('Input code type:', typeof code);
     console.log('Input code length:', code ? code.length : 0);
 
+    // Normalize email (trim and lowercase)
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    console.log('Normalized email:', normalizedEmail);
+
+    if (!normalizedEmail) {
+      console.error('Email is empty after normalization');
+      return {
+        success: false,
+        error: 'Email is required for verification',
+      };
+    }
+
     // Find user by email
     const { data: user, error: fetchError } = await supabase
       .from('users')
       .select('*')
-      .eq('email', email.toLowerCase())
+      .eq('email', normalizedEmail)
       .single();
 
     if (fetchError) {
