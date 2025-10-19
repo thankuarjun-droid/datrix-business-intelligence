@@ -47,18 +47,26 @@ export default function Verification() {
 
   const handleVerify = async (e) => {
     e.preventDefault();
+    console.log('=== HANDLE VERIFY CALLED ===');
+    console.log('Email from state:', email);
+    console.log('Verification code:', verificationCode);
+    console.log('Verification code length:', verificationCode ? verificationCode.length : 0);
+    
     setError('');
     setSuccess('');
 
     if (!verificationCode || verificationCode.length !== 6) {
+      console.error('Validation failed: Invalid verification code length');
       setError('Please enter a valid 6-digit verification code');
       return;
     }
 
+    console.log('Validation passed, calling verifyUser...');
     setLoading(true);
 
     try {
       const result = await verifyUser(email, verificationCode);
+      console.log('verifyUser result:', result);
 
       if (result.success) {
         setSuccess(result.message);
