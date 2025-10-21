@@ -200,7 +200,6 @@ export const verifyUser = async (email, code) => {
       .update({
         is_verified: true,
         status: 'verified',
-        verified_at: new Date().toISOString(),
       })
       .eq('id', user.id)
       .select()
