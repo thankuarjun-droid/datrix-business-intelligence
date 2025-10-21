@@ -1,17 +1,18 @@
 # Datrix™ Business Intelligence Scanner
 
-A comprehensive business intelligence assessment system designed for the garment manufacturing industry, featuring user registration, admin approval workflows, and a 27-question assessment framework.
+A comprehensive business intelligence assessment system designed for the garment manufacturing industry, featuring user registration, email verification, and a **60-question assessment framework across 7 categories**.
 
 ## 🎯 Overview
 
-Datrix™ is a professional business intelligence scanning system that helps garment manufacturing businesses assess their operational maturity across six key categories:
+Datrix™ is a professional business intelligence scanning system that helps garment manufacturing businesses assess their operational maturity across seven key categories:
 
-- **Financial Management** - Cash flow, budgeting, and cost control
-- **Operations Management** - Production processes and quality control
-- **Human Resources** - Recruitment, training, and workplace safety
-- **Marketing & Sales** - Brand positioning and customer relationships
-- **Strategic Management** - Business strategy and innovation
-- **Risk Management** - Risk assessment and crisis management
+- **Business Strategy & Vision** - Long-term direction and competitive positioning
+- **Sales, Marketing & Customer Management** - Revenue generation and client relationships
+- **Operations & Production Management** - Manufacturing efficiency and quality control
+- **Supply Chain & Vendor Management** - Sourcing and inventory management
+- **Financial Management & Cost Control** - Profitability and cash flow
+- **Technology & Digitalisation** - Technology adoption and digital systems
+- **HR & Organisational Culture** - People management and workplace culture
 
 ## 🏗️ System Architecture
 
@@ -20,167 +21,151 @@ Datrix™ is a professional business intelligence scanning system that helps gar
 - **UI Library**: shadcn/ui components with Tailwind CSS
 - **Routing**: React Router v6
 - **Icons**: Lucide React
+- **State Management**: React Hooks
 
 ### Backend
-- **Framework**: Flask (Python)
 - **Database**: Supabase (PostgreSQL)
-- **Authentication**: Email/SMS verification
-- **API**: RESTful API with CORS support
+- **Authentication**: Email verification with Resend
+- **Real-time**: Supabase real-time subscriptions
+- **Storage**: Supabase Storage for assets
 
 ### Database
 - **Platform**: Supabase
 - **Features**: Row Level Security (RLS), Real-time subscriptions
-- **Tables**: Users, Assessments, Admin Users, System Logs, and more
+- **Tables**: Users, Assessments, Assessment Questions, Assessment Categories, Assessment Responses
 
 ## 📁 Project Structure
 
 ```
-datrix-complete-system/
+datrix-business-intelligence/
 ├── frontend/                 # React frontend application
 │   ├── src/
 │   │   ├── components/      # Reusable UI components
 │   │   ├── pages/           # Page components
 │   │   │   ├── LandingPage.jsx
 │   │   │   ├── UserRegistration.jsx
-│   │   │   ├── Assessment.jsx
-│   │   │   ├── Results.jsx
-│   │   │   ├── AdminPanel.jsx
+│   │   │   ├── AssessmentV2.jsx
+│   │   │   ├── ResultsComplete.jsx
+│   │   │   ├── AdminInvitations.jsx
 │   │   │   └── PrivacyPolicy.jsx
+│   │   ├── lib/
+│   │   │   └── supabase.js  # Supabase client
 │   │   ├── App.jsx
 │   │   └── main.jsx
 │   ├── package.json
 │   └── vite.config.js
 │
-├── backend/                  # Flask backend API
-│   ├── src/
-│   │   ├── config/          # Configuration modules
-│   │   │   └── database.py  # Supabase configuration
-│   │   ├── routes/          # API route handlers
-│   │   │   ├── user.py      # User management routes
-│   │   │   ├── admin.py     # Admin panel routes
-│   │   │   └── assessment.py # Assessment routes
-│   │   └── main.py          # Flask application entry point
-│   ├── requirements.txt
-│   └── .env.example
-│
 ├── database/                 # Database schema and migrations
-│   └── supabase_schema.sql  # Complete Supabase schema
+│   ├── COMPLETE_60_QUESTIONS_7_CATEGORIES.sql
+│   └── supabase_schema.sql
 │
 └── docs/                     # Documentation
-    ├── SETUP.md             # Setup instructions
-    ├── API.md               # API documentation
-    └── DEPLOYMENT.md        # Deployment guide
+    └── README.md
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ and pnpm
-- Python 3.11+
+- Node.js 18+ and npm/pnpm
 - Supabase account
+- Resend account (for email verification)
 - Git
 
 ### Frontend Setup
 
 ```bash
 cd frontend
-pnpm install
+npm install --legacy-peer-deps
 cp .env.example .env
-# Edit .env with your API URL
-pnpm dev
+# Edit .env with your Supabase and API credentials
+npm run dev
 ```
 
 The frontend will be available at `http://localhost:5173`
 
-### Backend Setup
-
-```bash
-cd backend
-python3.11 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env
-# Edit .env with your Supabase credentials
-python src/main.py
-```
-
-The backend API will be available at `http://localhost:5000`
-
 ### Database Setup
 
 1. Create a new Supabase project at https://supabase.com
-2. Copy your project URL and API keys
-3. Run the SQL schema from `database/supabase_schema.sql` in the Supabase SQL Editor
-4. Update the `.env` file in the backend with your Supabase credentials
+2. Copy your project URL and anon key
+3. Run the SQL schema from `database/COMPLETE_60_QUESTIONS_7_CATEGORIES.sql` in the Supabase SQL Editor
+4. Update the `.env` file with your Supabase credentials
 
 ## 🔑 Environment Variables
 
 ### Frontend (.env)
 
 ```env
-VITE_API_URL=http://localhost:5000/api
-```
+# Supabase Configuration
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
 
-### Backend (.env)
+# Resend Email API
+VITE_RESEND_API_KEY=your-resend-api-key
 
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-anon-key
-SUPABASE_SERVICE_KEY=your-service-role-key
-FLASK_SECRET_KEY=your-secret-key
-FLASK_ENV=development
+# OpenAI API (for future AI features)
+VITE_OPENAI_API_KEY=your-openai-api-key
 ```
 
 ## 📊 Features
 
 ### User Features
-- ✅ User registration with email/mobile verification
-- ✅ Admin approval workflow
-- ✅ 27-question business assessment
+- ✅ User registration with email verification
+- ✅ 60-question business assessment across 7 categories
 - ✅ Detailed results with category breakdown
 - ✅ Grade-based performance evaluation (A, B, C, D)
-- ✅ Industry benchmarking
+- ✅ Intelligent recommendations based on scores
+- ✅ Category-wise performance analysis
 
 ### Admin Features
-- ✅ Dashboard with real-time statistics
-- ✅ User management (approve/reject)
+- ✅ Assessment invitation management
+- ✅ Token-based assessment access
+- ✅ User approval workflow
 - ✅ Assessment monitoring
-- ✅ System logs and audit trail
-- ✅ Assessment token generation
+- ✅ Results tracking
 
 ## 🔐 Security Features
 
 - Row Level Security (RLS) policies in Supabase
-- Email/SMS verification for user registration
-- Admin approval required before assessment access
-- Secure API endpoints with authentication
+- Email verification for user registration
+- Token-based assessment access
+- Secure API endpoints with Supabase authentication
 - Environment variable protection for sensitive data
 
 ## 📱 User Flow
 
-1. **Registration**: User fills out registration form
-2. **Verification**: User receives and enters verification code
-3. **Admin Approval**: Admin reviews and approves user
-4. **Assessment**: Approved user takes 27-question assessment
-5. **Results**: User receives detailed analysis and recommendations
+1. **Registration**: User fills out registration form with business details
+2. **Verification**: User receives email verification code and verifies account
+3. **Assessment**: User takes 60-question assessment via invitation token
+4. **Submission**: System calculates scores, grades, and generates recommendations
+5. **Results**: User receives detailed analysis with category breakdowns
 
 ## 🎨 Branding
 
-The system features professional Navvi branding with:
-- Custom color scheme (Blue and Purple gradients)
+The system features professional Datrix™ branding with:
+- Custom color scheme (Blue gradients)
 - Professional typography
 - Responsive design for all devices
-- Modern UI components
+- Modern UI components from shadcn/ui
 
 ## 📈 Assessment Categories
 
-1. **Financial Management** (5 questions)
-2. **Operations Management** (6 questions)
-3. **Human Resources** (4 questions)
-4. **Marketing & Sales** (5 questions)
-5. **Strategic Management** (5 questions)
-6. **Risk Management** (2 questions)
+1. **Business Strategy & Vision** (8 questions)
+2. **Sales, Marketing & Customer Management** (9 questions)
+3. **Operations & Production Management** (10 questions)
+4. **Supply Chain & Vendor Management** (8 questions)
+5. **Financial Management & Cost Control** (9 questions)
+6. **Technology & Digitalisation** (8 questions)
+7. **HR & Organisational Culture** (8 questions)
+
+**Total: 60 Questions**
+
+## 🎯 Grading System
+
+- **A Grade**: ≥85% - Exceptional Performance
+- **B Grade**: ≥70% - Strong Performance
+- **C Grade**: ≥55% - Adequate Performance
+- **D Grade**: <55% - Needs Improvement
 
 ## 🛠️ Technology Stack
 
@@ -190,55 +175,33 @@ The system features professional Navvi branding with:
 - Tailwind CSS
 - shadcn/ui
 - Lucide Icons
-- React Router
+- React Router v6
+- Supabase JS Client
 
 **Backend:**
-- Flask 3.0
-- Supabase Python Client
-- Flask-CORS
-- Python-dotenv
-
-**Database:**
 - Supabase (PostgreSQL)
 - Row Level Security
 - Real-time subscriptions
-
-## 📝 API Endpoints
-
-### User Routes
-- `POST /api/register` - Register new user
-- `POST /api/verify` - Verify user account
-- `GET /api/check-approval/:userId` - Check approval status
-- `GET /api/user/:userId` - Get user details
-
-### Admin Routes
-- `GET /api/admin/users` - Get all users
-- `POST /api/admin/approve-user/:userId` - Approve user
-- `POST /api/admin/reject-user/:userId` - Reject user
-- `GET /api/admin/dashboard-stats` - Get dashboard statistics
-- `GET /api/admin/assessments` - Get all assessments
-- `GET /api/admin/system-logs` - Get system logs
-
-### Assessment Routes
-- `POST /api/submit-assessment` - Submit assessment
-- `GET /api/assessment-results/:userId` - Get assessment results
+- Resend (Email service)
 
 ## 🚢 Deployment
 
-### Frontend Deployment (Manus.space)
-```bash
-cd frontend
-pnpm build
-# Deploy the dist/ folder to Manus.space
-```
+### Vercel Deployment
 
-### Backend Deployment (Manus.space)
-```bash
-cd backend
-# Deploy using Manus deploy tool
-```
+1. Import GitHub repository to Vercel
+2. Set **Root Directory** to `frontend`
+3. Set **Framework Preset** to `Vite`
+4. Add environment variables
+5. Deploy
 
-See `docs/DEPLOYMENT.md` for detailed deployment instructions.
+### Environment Variables for Vercel
+
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_RESEND_API_KEY=your-resend-api-key
+VITE_OPENAI_API_KEY=your-openai-api-key
+```
 
 ## 📄 License
 
@@ -246,16 +209,16 @@ Copyright © 2025 Navvi Corporation. All rights reserved.
 
 ## 🤝 Support
 
-For support, email admin@navvicorp.com or visit our support portal.
+For support, email support@navvicorp.com
 
 ## 👥 Credits
 
-Developed by the Navvi Technology Team
+Developed by the Navvi Technology Team  
 Powered by Datrix™ Business Intelligence Platform
 
 ---
 
-**Version**: 2.0.0  
-**Last Updated**: October 14, 2025  
+**Version**: 3.0.0  
+**Last Updated**: October 21, 2025  
 **Status**: Production Ready
 
