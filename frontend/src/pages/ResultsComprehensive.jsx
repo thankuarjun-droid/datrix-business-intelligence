@@ -6,6 +6,7 @@ import {
   prepareRadarChartData 
 } from '../services/comprehensiveAIReportService';
 import { supabase } from '../config/supabase';
+import { generateComprehensivePDF } from '../services/pdfGenerationService';
 import { 
   TrendingUp, Download, Calendar, CheckCircle2, Target, 
   Zap, Award, BarChart3, AlertCircle, ArrowRight, Sparkles,
@@ -88,8 +89,25 @@ const ResultsComprehensive = () => {
     window.open('https://calendly.com/navvicorp', '_blank');
   };
 
-  const downloadReport = () => {
-    alert('PDF download feature coming soon!');
+  const downloadReport = async () => {
+    if (!report) {
+      alert('Report data not available');
+      return;
+    }
+
+    try {
+      const companyName = businessContext?.company_name || 'Your Company';
+      const result = await generateComprehensivePDF(report, companyName);
+      
+      if (result.success) {
+        console.log('PDF generated successfully:', result.fileName);
+      } else {
+        alert('Error generating PDF: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      alert('Failed to generate PDF report. Please try again.');
+    }
   };
 
   if (loading) {
