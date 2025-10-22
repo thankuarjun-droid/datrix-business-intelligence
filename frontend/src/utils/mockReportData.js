@@ -72,41 +72,42 @@ export function generateMockBusinessContext() {
 
 export function generateMockResponses() {
   // Generate 60 mock responses (0-4 scale for most questions)
+  // Using actual question IDs format: q_categoryIndex_questionIndex
   const responses = {};
   
-  // Business Strategy & Vision (8 questions)
+  // Business Strategy & Vision (8 questions) - Lower scores
   for (let i = 1; i <= 8; i++) {
-    responses[`bsv_${i}`] = Math.floor(Math.random() * 3); // 0-2 (lower scores)
+    responses[`q_1_${i}`] = Math.floor(Math.random() * 2); // 0-1 (poor)
   }
   
-  // Sales, Marketing & Customer Management (7 questions)
+  // Sales, Marketing & Customer Management (7 questions) - Low scores
   for (let i = 1; i <= 7; i++) {
-    responses[`smcm_${i}`] = Math.floor(Math.random() * 3); // 0-2
+    responses[`q_2_${i}`] = Math.floor(Math.random() * 2); // 0-1
   }
   
-  // Operations & Production Management (12 questions)
+  // Operations & Production Management (12 questions) - Slightly better
   for (let i = 1; i <= 12; i++) {
-    responses[`opm_${i}`] = Math.floor(Math.random() * 4); // 0-3
+    responses[`q_3_${i}`] = Math.floor(Math.random() * 3); // 0-2
   }
   
-  // Supply Chain & Vendor Management (8 questions)
+  // Supply Chain & Vendor Management (8 questions) - Better performance
   for (let i = 1; i <= 8; i++) {
-    responses[`scvm_${i}`] = Math.floor(Math.random() * 4); // 0-3 (slightly better)
+    responses[`q_4_${i}`] = Math.floor(Math.random() * 3) + 1; // 1-3 (better)
   }
   
-  // Financial Management & Cost Control (10 questions)
+  // Financial Management & Cost Control (10 questions) - Poor
   for (let i = 1; i <= 10; i++) {
-    responses[`fmcc_${i}`] = Math.floor(Math.random() * 3); // 0-2
+    responses[`q_5_${i}`] = Math.floor(Math.random() * 2); // 0-1
   }
   
-  // Technology & Digitalisation (6 questions)
+  // Technology & Digitalisation (6 questions) - Low
   for (let i = 1; i <= 6; i++) {
-    responses[`td_${i}`] = Math.floor(Math.random() * 3); // 0-2
+    responses[`q_6_${i}`] = Math.floor(Math.random() * 2); // 0-1
   }
   
-  // HR & Organisational Culture (9 questions)
+  // HR & Organisational Culture (9 questions) - Low
   for (let i = 1; i <= 9; i++) {
-    responses[`hroc_${i}`] = Math.floor(Math.random() * 3); // 0-2
+    responses[`q_7_${i}`] = Math.floor(Math.random() * 2); // 0-1
   }
   
   return responses;

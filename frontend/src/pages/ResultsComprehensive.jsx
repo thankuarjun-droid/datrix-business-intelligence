@@ -197,10 +197,17 @@ const ResultsComprehensive = () => {
             </button>
             <button
               onClick={scheduleConsultation}
-              className="px-8 py-4 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all flex items-center gap-2 shadow-lg"
+              className="px-8 py-4 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all flex items-center gap-2 shadow-lg"
             >
               <Calendar className="h-5 w-5" />
-              Schedule Free Consultation
+              Book Your Free Consultation
+            </button>
+            <button
+              onClick={() => window.open('https://consulting.navvicorp.com/', '_blank')}
+              className="px-8 py-4 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-all flex items-center gap-2 shadow-lg"
+            >
+              <Download className="h-5 w-5" />
+              Claim Your Free Audit
             </button>
           </div>
         </div>
