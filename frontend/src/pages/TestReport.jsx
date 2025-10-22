@@ -22,7 +22,8 @@ const TestReport = () => {
         state: {
           assessmentData: mockData.assessmentData,
           businessContext: mockData.businessContext,
-          responses: mockData.responses
+          responses: mockData.responses,
+          questions: mockData.questions
         }
       });
     }, 1000);

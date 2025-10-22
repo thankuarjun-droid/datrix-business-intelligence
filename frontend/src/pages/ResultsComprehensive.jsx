@@ -29,6 +29,7 @@ const ResultsComprehensive = () => {
   const assessmentData = location.state?.assessmentData;
   const businessContext = location.state?.businessContext;
   const responses = location.state?.responses;
+  const providedQuestions = location.state?.questions; // For test mode
 
   useEffect(() => {
     if (!assessmentData || !businessContext || !responses) {
@@ -43,21 +44,29 @@ const ResultsComprehensive = () => {
     try {
       setLoading(true);
 
-      // Load questions from Supabase
-      const { data: questionsData, error: questionsError } = await supabase
-        .from('assessment_questions')
-        .select(`
-          *,
-          assessment_categories (
-            id,
-            name,
-            description
-          )
-        `)
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+      let questionsData;
+      
+      // Use provided questions (test mode) or load from Supabase (real mode)
+      if (providedQuestions && providedQuestions.length > 0) {
+        questionsData = providedQuestions;
+      } else {
+        // Load questions from Supabase
+        const { data: dbQuestions, error: questionsError } = await supabase
+          .from('assessment_questions')
+          .select(`
+            *,
+            assessment_categories (
+              id,
+              name,
+              description
+            )
+          `)
+          .eq('is_active', true)
+          .order('display_order', { ascending: true });
 
-      if (questionsError) throw questionsError;
+        if (questionsError) throw questionsError;
+        questionsData = dbQuestions;
+      }
 
       setQuestions(questionsData);
 

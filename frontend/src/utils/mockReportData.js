@@ -355,3 +355,18 @@ export default {
   generateMockQuestions 
 };
 
+
+
+/**
+ * Generate complete mock report data including assessment, context, responses, and questions
+ * This is the main function used by TestReport component
+ */
+export function generateMockReportData() {
+  return {
+    assessmentData: generateMockAssessmentData(),
+    businessContext: generateMockBusinessContext(),
+    responses: generateMockResponses(),
+    questions: generateMockQuestions()
+  };
+}
+
