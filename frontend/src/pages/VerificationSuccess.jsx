@@ -62,7 +62,7 @@ export default function VerificationSuccess() {
                   <div>
                     <p className="font-medium">Complete Assessment</p>
                     <p className="text-sm text-gray-600">
-                      Use the link to access the comprehensive 67-question business health assessment tailored for garment manufacturers.
+                      Use the link to access the comprehensive 60-question business health assessment tailored for garment manufacturers.
                     </p>
                   </div>
                 </div>
