@@ -168,7 +168,7 @@ const ResultsComprehensive = () => {
 
           <div className="grid md:grid-cols-4 gap-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
-              <div className="text-5xl font-bold mb-2">{percentage.toFixed(1)}%</div>
+              <div className="text-5xl font-bold mb-2">{parseFloat(percentage || 0).toFixed(1)}%</div>
               <div className="text-blue-100">Overall Score</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
@@ -345,7 +345,7 @@ const ResultsComprehensive = () => {
 
           <div className="grid md:grid-cols-3 gap-4 mt-8">
             <div className="bg-blue-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-blue-600">{percentage.toFixed(1)}%</div>
+              <div className="text-3xl font-bold text-blue-600">{parseFloat(percentage || 0).toFixed(1)}%</div>
               <div className="text-sm text-gray-600">Your Average</div>
             </div>
             <div className="bg-orange-50 rounded-lg p-4 text-center">
@@ -409,7 +409,7 @@ const ResultsComprehensive = () => {
               </div>
               <div className="text-right">
                 <div className="text-3xl font-bold text-blue-600">
-                  {report.assessment_summary.category_scores[categoryData.name]?.percentage.toFixed(1)}%
+                  {parseFloat(report.assessment_summary.category_scores[categoryData.name]?.percentage || 0).toFixed(1)}%
                 </div>
                 <span className={`text-xs px-3 py-1 rounded-full ${
                   categoryData.summary.priority_level === 'Critical' ? 'bg-red-100 text-red-800' :

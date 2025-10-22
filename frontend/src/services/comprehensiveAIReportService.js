@@ -330,12 +330,12 @@ BUSINESS PROFILE:
 - Current Challenges: ${businessContext.current_challenges}
 
 ASSESSMENT RESULTS:
-- Overall Score: ${assessmentData.total_score}/${assessmentData.max_score} (${assessmentData.percentage.toFixed(1)}%)
+- Overall Score: ${assessmentData.total_score}/${assessmentData.max_score} (${parseFloat(assessmentData.percentage || 0).toFixed(1)}%)
 - Performance Grade: ${assessmentData.grade}
 
 CATEGORY SCORES:
 ${Object.entries(assessmentData.category_scores).map(([category, data]) => 
-  `- ${category}: ${data.score}/${data.max_score} (${data.percentage.toFixed(1)}%)`
+  `- ${category}: ${data.score}/${data.max_score} (${parseFloat(data.percentage || 0).toFixed(1)}%)`
 ).join('\n')}
 
 CRITICAL AREAS (Performance < 40%):
@@ -384,7 +384,7 @@ function generateFallbackInsights(data) {
 
   return {
     executive_summary: {
-      overview: `Your business scored ${assessmentData.percentage.toFixed(1)}% overall, with strongest performance in ${getTopCategory(assessmentData.category_scores)} and opportunities for improvement in ${getWeakestCategory(assessmentData.category_scores)}.`,
+      overview: `Your business scored ${parseFloat(assessmentData.percentage || 0).toFixed(1)}% overall, with strongest performance in ${getTopCategory(assessmentData.category_scores)} and opportunities for improvement in ${getWeakestCategory(assessmentData.category_scores)}.`,
       critical_insight: `Focus on strengthening ${getWeakestCategory(assessmentData.category_scores)} to achieve your stated goals.`,
       key_findings: [
         `Overall performance grade: ${assessmentData.grade}`,
@@ -437,7 +437,7 @@ function generateFallbackCategoryInsights(categoryScores) {
     const percentage = data.percentage;
     
     insights[category] = {
-      current_state: `Your ${category.toLowerCase()} scored ${percentage.toFixed(1)}%, indicating ${percentage >= 60 ? 'satisfactory' : 'significant room for'} performance.`,
+      current_state: `Your ${category.toLowerCase()} scored ${parseFloat(percentage || 0).toFixed(1)}%, indicating ${percentage >= 60 ? 'satisfactory' : 'significant room for'} performance.`,
       strengths: percentage >= 60 ? ['Established processes', 'Functional systems'] : [],
       weaknesses: percentage < 60 ? ['Needs systematic improvement', 'Requires attention'] : [],
       recommendations: [
