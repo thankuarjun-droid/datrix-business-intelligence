@@ -514,7 +514,7 @@ export function prepareRadarChartData(categoryScores) {
   
   return Object.entries(categoryScores).map(([category, data]) => ({
     category: category.length > 30 ? category.substring(0, 27) + '...' : category,
-    yourScore: parseFloat(data.percentage.toFixed(1)),
+    yourScore: parseFloat(parseFloat(data.percentage || 0).toFixed(1)),
     industryAverage: benchmarks.category_averages[category] || benchmarks.industry_average,
     topPerformers: benchmarks.top_performers
   }));
