@@ -286,7 +286,16 @@ async function generateAIInsights(data) {
         messages: [
           {
             role: 'system',
-            content: 'You are a senior business consultant specializing in garment manufacturing and textile industry analysis. Provide detailed, actionable insights based on assessment data.'
+            content: `You are a senior partner at McKinsey & Company with 20+ years of experience in garment manufacturing and textile industry transformation. You have successfully led 50+ factory optimization projects across Tirupur, Bangladesh, and Vietnam, delivering average efficiency improvements of 35% and cost reductions of 25%. 
+
+Your writing style is:
+- Insightful and data-driven, identifying root causes and systemic issues
+- Natural and conversational, avoiding jargon and templates  
+- Specific and actionable, with concrete recommendations
+- Strategic yet practical, balancing quick wins with long-term transformation
+- Empathetic and supportive, acknowledging challenges while inspiring confidence
+
+Provide analysis that demonstrates deep industry expertise and makes the client feel they've received a ₹5 lakh consultant engagement.`
           },
           {
             role: 'user',
@@ -319,60 +328,118 @@ async function generateAIInsights(data) {
 function buildAIPrompt(data) {
   const { assessmentData, businessContext, questionAnalysis } = data;
 
+  const criticalQuestions = questionAnalysis.filter(qa => qa.performance_level === 'Critical');
+  const needsImprovementQuestions = questionAnalysis.filter(qa => qa.performance_level === 'Needs Improvement');
+  
   return `
-Analyze this garment manufacturing business assessment and provide comprehensive insights:
+You are analyzing a comprehensive business intelligence assessment for a garment manufacturing company. Provide deep, McKinsey-quality insights that will genuinely help them transform their business.
 
-BUSINESS PROFILE:
-- Sewing Machines: ${businessContext.sewing_machines}
-- Annual Turnover: ${businessContext.turnover_currency} ${parseInt(businessContext.annual_turnover).toLocaleString()}
-- 1-Year Goals: ${businessContext.one_year_goals}
-- 3-Year Goals: ${businessContext.three_year_goals}
-- Current Challenges: ${businessContext.current_challenges}
+## COMPANY PROFILE
 
-ASSESSMENT RESULTS:
-- Overall Score: ${assessmentData.total_score}/${assessmentData.max_score} (${parseFloat(assessmentData.percentage || 0).toFixed(1)}%)
-- Performance Grade: ${assessmentData.grade}
+**Scale:** ${businessContext.sewing_machines} sewing machines
+**Revenue:** ${businessContext.turnover_currency} ${parseInt(businessContext.annual_turnover).toLocaleString()} annually
+**Industry:** Garment Manufacturing (Tirupur/India)
 
-CATEGORY SCORES:
-${Object.entries(assessmentData.category_scores).map(([category, data]) => 
-  `- ${category}: ${data.score}/${data.max_score} (${parseFloat(data.percentage || 0).toFixed(1)}%)`
+**Strategic Objectives:**
+- 1-Year Goal: ${businessContext.one_year_goals}
+- 3-Year Vision: ${businessContext.three_year_goals}
+
+**Current Pain Points:**
+${businessContext.current_challenges}
+
+## ASSESSMENT PERFORMANCE
+
+**Overall Maturity:** ${parseFloat(assessmentData.percentage || 0).toFixed(1)}% (Grade ${assessmentData.grade})
+**Total Score:** ${assessmentData.total_score}/${assessmentData.max_score} points
+
+**Category Performance:**
+${Object.entries(assessmentData.category_scores).map(([category, data]) => {
+  const pct = parseFloat(data.percentage || 0).toFixed(1);
+  const status = pct < 30 ? '🔴 CRITICAL' : pct < 50 ? '🟡 NEEDS ATTENTION' : pct < 70 ? '🟢 DEVELOPING' : '✅ STRONG';
+  return `- ${category}: ${pct}% ${status} (${data.score}/${data.max_score})`;
+}).join('\n')}
+
+**Critical Gaps (${criticalQuestions.length} areas scoring < 40%):**
+${criticalQuestions.slice(0, 8).map(qa => 
+  `- ${qa.question_text} → Response: "${qa.response_text}"`
 ).join('\n')}
 
-CRITICAL AREAS (Performance < 40%):
-${questionAnalysis.filter(qa => qa.performance_level === 'Critical').map(qa => 
-  `- ${qa.question_text}: ${qa.response_text}`
+**Areas Needing Improvement (${needsImprovementQuestions.length} areas scoring 40-60%):**
+${needsImprovementQuestions.slice(0, 5).map(qa => 
+  `- ${qa.question_text} → Response: "${qa.response_text}"`
 ).join('\n')}
 
-Provide a comprehensive analysis in JSON format with:
+## YOUR TASK
+
+Provide a comprehensive consultant-quality analysis in JSON format. Write as if you're presenting findings to the CEO in a boardroom.
+
+**Requirements:**
+
+1. **Executive Summary** - Write 2-3 insightful paragraphs that:
+   - Identify the core systemic issues (not just symptoms)
+   - Connect performance gaps to their stated goals and challenges
+   - Provide a clear narrative of where they are vs. where they want to be
+   - Use specific numbers and percentages from the data
+   - Be encouraging yet honest about the transformation needed
+
+2. **Critical Insight** - The single most important finding that, if addressed, would have the biggest impact. Make it specific and actionable.
+
+3. **Key Findings** - 4-5 data-driven observations that reveal patterns, not just individual scores. Examples:
+   - "Your operational processes (29%) significantly outperform strategic planning (22%), suggesting execution capability exists but lacks direction"
+   - "With 475 machines and ₹11Cr turnover, your revenue per machine (₹23L/year) is 40% below industry average, indicating utilization or pricing issues"
+
+4. **Category Insights** - For EACH of the 7 categories, provide:
+   - Current state: 2-3 sentences analyzing root causes, not just describing the score
+   - Strengths: 2-3 specific capabilities they DO have (even if weak overall)
+   - Weaknesses: 2-3 systemic gaps causing the low score
+   - Recommendations: 3-4 specific, prioritized actions with expected outcomes
+   - Priority: Critical/High/Medium/Low based on impact on their goals
+
+5. **Quick Wins** - 5-7 high-impact, low-effort actions that can deliver results in 2-8 weeks. Each must:
+   - Be ultra-specific ("Implement daily production tracking using Excel template" not "Improve tracking")
+   - State expected impact ("Reduce defects by 20%" not "Improve quality")
+   - Be realistic for their scale (475 machines, ₹11Cr revenue)
+   - Address their actual weak areas from the assessment
+
+6. **Strategic Roadmap** - 90-day action plan broken into:
+   - Month 1: Foundation (quick wins, data collection, process documentation)
+   - Month 2: System building (process improvements, training, tool implementation)
+   - Month 3: Optimization (measurement, refinement, scaling successful pilots)
+
+JSON Structure:
 {
   "executive_summary": {
-    "overview": "2-3 paragraph executive summary",
-    "critical_insight": "Most important finding",
-    "key_findings": ["finding1", "finding2", "finding3"]
+    "overview": "2-3 paragraph narrative analysis",
+    "critical_insight": "The single most important finding",
+    "key_findings": ["insight 1", "insight 2", "insight 3", "insight 4"]
   },
   "category_insights": {
-    "Category Name": {
-      "current_state": "Detailed assessment",
-      "strengths": ["strength1", "strength2"],
-      "weaknesses": ["weakness1", "weakness2"],
-      "recommendations": ["rec1", "rec2", "rec3"],
+    "Business Strategy & Vision": {
+      "current_state": "Root cause analysis",
+      "strengths": ["strength 1", "strength 2"],
+      "weaknesses": ["gap 1", "gap 2", "gap 3"],
+      "recommendations": ["action 1", "action 2", "action 3"],
       "priority_level": "Critical|High|Medium|Low"
-    }
+    },
+    ... (repeat for all 7 categories)
   },
   "quick_wins": [
     {
-      "action": "Specific action",
+      "action": "Specific, implementable action",
+      "expected_impact": "Quantified outcome",
       "impact": "High|Medium|Low",
       "effort": "Low|Medium|High",
-      "timeline": "1-2 weeks|1 month|2-3 months"
+      "timeline": "2 weeks|1 month|6 weeks|2 months"
     }
   ],
   "strategic_roadmap": {
-    "month_1": ["action1", "action2"],
-    "month_2": ["action1", "action2"],
-    "month_3": ["action1", "action2"]
+    "month_1": ["action 1", "action 2", "action 3"],
+    "month_2": ["action 1", "action 2", "action 3"],
+    "month_3": ["action 1", "action 2", "action 3"]
   }
 }
+
+Remember: This should read like a ₹5 lakh McKinsey engagement, not a generic automated report. Be insightful, specific, and genuinely helpful.
 `;
 }
 
