@@ -43,33 +43,51 @@ const AssessmentFinal = () => {
 
   const createOrGetUser = async () => {
     try {
-      if (!invitation || !invitation.client_email) return;
+      if (!invitation || !invitation.client_email) {
+        console.error('No invitation data available');
+        return;
+      }
 
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', invitation.client_email)
-        .maybeSingle();
-
-      if (existingUser) {
-        setUserId(existingUser.id);
-      } else {
-        const { data: newUser, error: insertError } = await supabase
+      // Check if invitation has user ID directly (from users table)
+      if (invitation.id && invitation.client_email) {
+        // Try to find user by email
+        const { data: existingUser } = await supabase
           .from('users')
-          .insert([{
-            name: invitation.client_name,
-            email: invitation.client_email,
-            mobile: invitation.client_mobile || '',
-            company_name: invitation.company_name,
-            is_verified: true,
-            verification_token: token
-          }])
-          .select()
-          .single();
+          .select('id')
+          .eq('email', invitation.client_email)
+          .maybeSingle();
 
-        if (!insertError && newUser) {
-          setUserId(newUser.id);
+        if (existingUser) {
+          console.log('Found existing user:', existingUser.id);
+          setUserId(existingUser.id);
+          return;
         }
+      }
+
+      // If no existing user found, create new one (for manual invitations)
+      console.log('Creating new user for invitation');
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert([{
+          full_name: invitation.client_name,
+          email: invitation.client_email,
+          mobile: invitation.client_mobile || '',
+          business_name: invitation.company_name,
+          is_verified: true,
+          status: 'approved',
+          assessment_token: token
+        }])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error creating user:', insertError);
+        return;
+      }
+
+      if (newUser) {
+        console.log('Created new user:', newUser.id);
+        setUserId(newUser.id);
       }
     } catch (error) {
       console.error('Error in createOrGetUser:', error);
