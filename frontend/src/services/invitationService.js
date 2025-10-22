@@ -117,6 +117,33 @@ export const getInvitations = async (filters = {}) => {
  */
 export const validateToken = async (token) => {
   try {
+    // First, try to find token in users table (new registration flow)
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('assessment_token', token)
+      .eq('status', 'approved')
+      .single();
+
+    if (!userError && userData) {
+      // Token found in users table
+      return {
+        success: true,
+        valid: true,
+        source: 'users',
+        invitation: {
+          id: userData.id,
+          client_name: userData.full_name,
+          client_email: userData.email,
+          company_name: userData.business_name,
+          status: 'approved',
+          expires_at: null // User tokens don't expire
+        },
+        user: userData
+      };
+    }
+
+    // If not found in users, try assessment_invitations table (old manual invitation flow)
     const { data, error } = await supabase
       .rpc('validate_assessment_token', { token_value: token });
 
@@ -139,6 +166,7 @@ export const validateToken = async (token) => {
     return {
       success: true,
       valid: true,
+      source: 'invitations',
       invitation: {
         id: result.invitation_id,
         client_name: result.client_name,
