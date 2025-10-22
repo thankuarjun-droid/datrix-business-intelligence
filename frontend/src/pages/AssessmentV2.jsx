@@ -358,7 +358,8 @@ const AssessmentFinal = () => {
             category_scores: categoryScoresData,
             recommendations: recommendations,
             completed_at: new Date().toISOString()
-          }
+          },
+          responses: responses
         }
       });
     } catch (error) {

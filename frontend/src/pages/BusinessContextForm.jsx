@@ -61,11 +61,12 @@ const BusinessContextForm = () => {
       return;
     }
 
-    // Navigate to AI report generation with all data
-    navigate('/results-enhanced', {
+    // Navigate to comprehensive AI report generation with all data
+    navigate('/results-comprehensive', {
       state: {
         assessmentData: assessmentData,
-        businessContext: formData
+        businessContext: formData,
+        responses: location.state?.responses || {}
       }
     });
   };
