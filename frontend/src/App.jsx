@@ -9,6 +9,7 @@ import Results from './pages/ResultsComplete';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import AdminPanelComplete from './pages/AdminPanelComplete';
 import AdminInvitations from './pages/AdminInvitations';
+import AdminDashboard from './pages/AdminDashboard';
 import Verification from './pages/Verification';
 import VerificationSuccess from './pages/VerificationSuccess';
 import './App.css';
@@ -36,7 +37,8 @@ function App() {
           <Route path="/results" element={<Results />} />
           
           {/* Admin Routes */}
-          <Route path="/admin" element={<AdminInvitations />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/invitations" element={<AdminInvitations />} />
           <Route path="/admin/users" element={<AdminPanelComplete />} />
         </Routes>
       </div>
