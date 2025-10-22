@@ -9,6 +9,7 @@ import Results from './pages/ResultsComplete';
 import BusinessContextForm from './pages/BusinessContextForm';
 import ResultsEnhanced from './pages/ResultsEnhanced';
 import ResultsComprehensive from './pages/ResultsComprehensive';
+import TestReport from './pages/TestReport';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import AdminPanelComplete from './pages/AdminPanelComplete';
 import AdminInvitations from './pages/AdminInvitations';
@@ -40,6 +41,7 @@ function App() {
           <Route path="/business-context" element={<BusinessContextForm />} />
           <Route path="/results-enhanced" element={<ResultsEnhanced />} />
           <Route path="/results-comprehensive" element={<ResultsComprehensive />} />
+          <Route path="/test-report" element={<TestReport />} />
           <Route path="/results" element={<Results />} />
           
           {/* Admin Routes */}
