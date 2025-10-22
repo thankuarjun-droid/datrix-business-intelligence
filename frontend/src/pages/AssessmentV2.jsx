@@ -345,8 +345,8 @@ const AssessmentFinal = () => {
         });
       }
 
-      // Navigate to results page with assessment data
-      navigate('/results', {
+      // Navigate to business context form to collect additional data
+      navigate('/business-context', {
         state: {
           assessmentData: {
             id: assessment.id,

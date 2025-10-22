@@ -6,6 +6,8 @@ import Assessment from './pages/AssessmentComplete';
 import AssessmentV2 from './pages/AssessmentV2';
 import AssessmentAccess from './pages/AssessmentAccess';
 import Results from './pages/ResultsComplete';
+import BusinessContextForm from './pages/BusinessContextForm';
+import ResultsEnhanced from './pages/ResultsEnhanced';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import AdminPanelComplete from './pages/AdminPanelComplete';
 import AdminInvitations from './pages/AdminInvitations';
@@ -34,6 +36,8 @@ function App() {
           <Route path="/assessment-old" element={<Assessment />} />
           
           {/* Results */}
+          <Route path="/business-context" element={<BusinessContextForm />} />
+          <Route path="/results-enhanced" element={<ResultsEnhanced />} />
           <Route path="/results" element={<Results />} />
           
           {/* Admin Routes */}
