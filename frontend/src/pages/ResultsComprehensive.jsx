@@ -129,8 +129,8 @@ const ResultsComprehensive = () => {
 
   const radarData = prepareRadarChartData(report.assessment_summary.category_scores);
   const aiInsights = report.ai_insights;
-  const percentage = report.assessment_summary.percentage;
-  const grade = report.assessment_summary.grade;
+  const percentage = parseFloat(report.assessment_summary.percentage) || 0;
+  const grade = report.assessment_summary.grade || 'N/A';
   const heatMapData = report.heat_map || [];
   const categoryDeepDives = report.category_deep_dives || [];
 
@@ -507,62 +507,63 @@ const ResultsComprehensive = () => {
         ))}
 
         {/* Consultation CTA */}
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl shadow-2xl p-8 mb-8 text-white">
+        <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl shadow-2xl p-8 mb-8 text-white">
           <div className="text-center mb-8">
-            <h2 className="text-4xl font-bold mb-4">Ready to Transform Your Business?</h2>
-            <p className="text-xl text-purple-100">
-              This comprehensive report is just the beginning. Let our experts help you implement these insights.
+            <h2 className="text-4xl font-bold mb-4">Save ₹8+ Crores Annually: Eliminate Factory Inefficiencies in 90 Days</h2>
+            <p className="text-xl text-orange-100 mb-4">
+              Stop losing money to operational inefficiencies. Get your complete transformation package with our proven Ultimate Factory Transformation Mastery.
             </p>
+            <div className="inline-block bg-yellow-400 text-gray-900 px-6 py-3 rounded-lg font-bold text-lg">
+              🛡️ 50% Money Back Guarantee if we don't deliver 15% savings in 90 days!
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <h3 className="text-2xl font-bold mb-4">What You Get with Consultation:</h3>
+              <h3 className="text-2xl font-bold mb-4">Our Scientific 3-Phase Transformation:</h3>
               <ul className="space-y-3">
                 {[
-                  'Customized implementation roadmap',
-                  'Hands-on support from industry experts',
-                  'Access to proven frameworks and tools',
-                  'Regular progress reviews and adjustments',
-                  'ROI tracking and performance metrics'
-                ].map((benefit, i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <CheckCircle2 className="h-6 w-6 text-green-300 flex-shrink-0" />
-                    <span>{benefit}</span>
+                  { phase: 'Crisis Response (0-3 months)', result: '50% Loss Reduction' },
+                  { phase: 'System Enhancement (3-9 months)', result: '70% Loss Reduction' },
+                  { phase: 'Excellence Institutionalization (9-15 months)', result: '85% Loss Reduction' }
+                ].map((item, i) => (
+                  <li key={i} className="bg-white/10 rounded-lg p-3">
+                    <div className="font-semibold">{item.phase}</div>
+                    <div className="text-sm text-orange-100">{item.result}</div>
                   </li>
                 ))}
               </ul>
             </div>
 
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <h3 className="text-2xl font-bold mb-4">Typical Outcomes:</h3>
+              <h3 className="text-2xl font-bold mb-4">Proven Results:</h3>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <TrendingUp className="h-6 w-6 text-green-300 flex-shrink-0 mt-1" />
+                  <Award className="h-6 w-6 text-yellow-300 flex-shrink-0 mt-1" />
                   <div>
-                    <div className="font-semibold">20-30% Efficiency Gain</div>
-                    <div className="text-sm text-purple-100">Within 6 months of implementation</div>
+                    <div className="font-semibold">10+ Factories Transformed</div>
+                    <div className="text-sm text-orange-100">98% Client Satisfaction</div>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <DollarSign className="h-6 w-6 text-green-300 flex-shrink-0 mt-1" />
                   <div>
-                    <div className="font-semibold">15-25% Cost Reduction</div>
+                    <div className="font-semibold">₹500+ Cr Total Savings</div>
                     <div className="text-sm text-purple-100">Through process optimization</div>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Users className="h-6 w-6 text-green-300 flex-shrink-0 mt-1" />
+                  <TrendingUp className="h-6 w-6 text-green-300 flex-shrink-0 mt-1" />
                   <div>
-                    <div className="font-semibold">Improved Team Performance</div>
-                    <div className="text-sm text-purple-100">Higher productivity and morale</div>
+                    <div className="font-semibold">Cut Defects by 3%, Slash Rework by 15%</div>
+                    <div className="text-sm text-orange-100">Optimize workforce efficiency</div>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Clock className="h-6 w-6 text-green-300 flex-shrink-0 mt-1" />
+                  <CheckCircle className="h-6 w-6 text-green-300 flex-shrink-0 mt-1" />
                   <div>
-                    <div className="font-semibold">3-6 Month ROI</div>
-                    <div className="text-sm text-purple-100">Investment pays for itself quickly</div>
+                    <div className="font-semibold">500%+ ROI in 12 Months</div>
+                    <div className="text-sm text-orange-100">Visible results within 30 days</div>
                   </div>
                 </div>
               </div>
@@ -572,14 +573,17 @@ const ResultsComprehensive = () => {
           <div className="text-center">
             <button
               onClick={scheduleConsultation}
-              className="px-12 py-5 bg-white text-purple-600 rounded-xl font-bold text-lg hover:bg-purple-50 transition-all shadow-xl hover:shadow-2xl transform hover:scale-105 inline-flex items-center gap-3"
+              className="px-12 py-5 bg-yellow-400 text-gray-900 rounded-xl font-bold text-lg hover:bg-yellow-300 transition-all shadow-xl hover:shadow-2xl transform hover:scale-105 inline-flex items-center gap-3"
             >
               <Calendar className="h-6 w-6" />
-              Schedule Your Free 30-Minute Consultation
+              📋 Claim Your Free Factory Audit
               <ArrowRight className="h-6 w-6" />
             </button>
-            <p className="mt-4 text-purple-100">
-              No obligation • Expert guidance • Tailored to your business
+            <p className="mt-4 text-orange-100 font-semibold">
+              ✅ Free ✅ 45 Min ✅ No Risk • Expert-led problem analysis • Custom recommendations
+            </p>
+            <p className="mt-2 text-sm text-orange-200">
+              Contact: +91-989-44-66-715 | arjunm@navvicorp.com | Avinashi Road, Tirupur
             </p>
           </div>
         </div>
