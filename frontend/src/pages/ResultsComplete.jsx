@@ -9,7 +9,22 @@ const ResultsComplete = () => {
   
   useEffect(() => {
     if (location.state?.assessmentData) {
-      setResults(location.state.assessmentData);
+      const data = location.state.assessmentData;
+      // Ensure percentage is a number and normalize field names
+      const normalizedData = {
+        ...data,
+        percentage: parseFloat(data.percentage) || 0,
+        grade: data.overall_grade || data.grade || 'D',
+        tier: data.performance_tier || data.tier || 'Developing',
+        category_scores: data.category_scores || {}
+      };
+      // Ensure category percentages are numbers
+      Object.keys(normalizedData.category_scores).forEach(key => {
+        if (normalizedData.category_scores[key].percentage) {
+          normalizedData.category_scores[key].percentage = parseFloat(normalizedData.category_scores[key].percentage) || 0;
+        }
+      });
+      setResults(normalizedData);
     } else {
       navigate('/');
     }
