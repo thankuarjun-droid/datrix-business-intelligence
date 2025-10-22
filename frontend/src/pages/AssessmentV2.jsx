@@ -338,16 +338,27 @@ const AssessmentFinal = () => {
         return;
       }
 
+      // Mark token as completed (non-blocking - don't wait for it)
       if (token) {
-        await markTokenCompleted(token, finalUserId);
+        markTokenCompleted(token, finalUserId).catch(err => {
+          console.warn('Failed to mark token as completed:', err);
+        });
       }
 
+      // Navigate to results page with assessment data
       navigate('/results', {
         state: {
-          assessmentId: assessment.id,
-          userId: finalUserId,
-          responses: responses,
-          questions: questions
+          assessmentData: {
+            id: assessment.id,
+            user_id: finalUserId,
+            total_score: totalScore,
+            max_score: maxScore,
+            percentage: parseFloat(percentage),
+            overall_grade: overallGrade,
+            category_scores: categoryScoresData,
+            recommendations: recommendations,
+            completed_at: new Date().toISOString()
+          }
         }
       });
     } catch (error) {
