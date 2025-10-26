@@ -1,7 +1,9 @@
 // /api/report-data.js
 // Build a report from Supabase answers for one assessment_id.
-// ENV needed in Vercel: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-// Optional: DATRIX_ANNUAL_COST_BASE (default ₹12 Cr = 120000000)
+// ENV (Vercel -> Settings -> Environment Variables):
+//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// Optional:
+//   DATRIX_ANNUAL_COST_BASE  (e.g., 120000000 = ₹12 Cr)
 
 const TB = {
   assessments: "assessments",
@@ -28,12 +30,12 @@ export default async function handler(req, res) {
       return r.json();
     }
 
-    // 1) Assessment meta
+    // Assessment meta
     const meta = await sb(`${TB.assessments}?id=eq.${assessmentId}&select=id,company,assessed_at,user_email&limit=1`);
     const assess = meta?.[0];
     if (!assess) return res.status(404).json({ error: "Assessment not found" });
 
-    // 2) Answers + join question + category
+    // Answers + join question + category
     const answers = await sb(
       `${TB.answers}?assessment_id=eq.${assessmentId}&select=question_id,score,question:${TB.questions}(id,text,category_key,category:${TB.categories}(key,name))`
     );
@@ -50,7 +52,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // ---- Aggregate
+    // Aggregate
     const MAX_PER_Q = 4;
     let red = 0, amber = 0, green = 0;
     const byCat = new Map();
@@ -60,21 +62,19 @@ export default async function handler(req, res) {
       const catKey = a.question?.category?.key || a.question?.category_key || "misc";
       const catName = a.question?.category?.name || "Misc";
       const score = Number(a.score ?? 0);
-      const q = { id: a.question_id, text: a.question?.text || "Question", cat: catKey, cat_name: catName, score };
 
-      // distribution
       if (score <= 1) red += 1;
       else if (score === 2) amber += 1;
       else green += 1;
 
       total += score;
 
-      // per-category stats
       if (!byCat.has(catKey)) byCat.set(catKey, { key: catKey, name: catName, sum: 0, n: 0, worst: { score: 999, text: "" } });
       const c = byCat.get(catKey);
       c.sum += score; c.n += 1;
-      if (score < c.worst.score) c.worst = { score, text: q.text };
-      return q;
+      if (score < c.worst.score) c.worst = { score, text: a.question?.text || "" };
+
+      return { id: a.question_id, text: a.question?.text || "Question", cat: catKey, cat_name: catName, score };
     });
 
     const categories = Array.from(byCat.values()).map((c) => ({
@@ -82,20 +82,19 @@ export default async function handler(req, res) {
       name: c.name,
       avg: c.n ? c.sum / c.n : 0,
       max: MAX_PER_Q,
-      top_issue: c.worst.text || "", // lowest-scoring question text from user input
+      top_issue: c.worst.text || "",
     }));
 
     const overall = { score: total, max: questions.length * MAX_PER_Q };
     const distribution = { red, amber, green };
 
-    // Savings model: gap × weight × annual base
+    // Savings = gap × weight × annualBase
     const annualBase = Number(process.env.DATRIX_ANNUAL_COST_BASE || 120000000);
     const weights = { quality: 0.25, production: 0.20, ie: 0.15, planning: 0.15, hr: 0.10, compliance: 0.05, costing: 0.10, misc: 0.00 };
     const savings = categories.map((c) => {
-      const gap = Math.max(0, 4 - c.avg) / 4; // 0..1
+      const gap = Math.max(0, 4 - c.avg) / 4;
       const w = weights[c.key] ?? 0.05;
-      const value = Math.round(annualBase * gap * w);
-      return { key: c.key, name: c.name, value, gap };
+      return { key: c.key, name: c.name, value: Math.round(annualBase * gap * w), gap };
     });
 
     res.status(200).json({
