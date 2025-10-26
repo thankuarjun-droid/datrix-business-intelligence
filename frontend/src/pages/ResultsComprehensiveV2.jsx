@@ -1,10 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-const BRAND = {
-  blue: "#0B3B8C", yellow: "#F5B301",
-  red: "#EF4444", orange: "#F97316", amber: "#F59E0B",
-  green: "#16A34A", greenLite: "#22C55E"
-};
+const BRAND = { blue:"#0B3B8C", yellow:"#F5B301", red:"#EF4444", orange:"#F97316", amber:"#F59E0B", green:"#16A34A", greenLite:"#22C55E" };
+const btnCss = `.btn{padding:.375rem .75rem;border:1px solid #e2e8f0;border-radius:.5rem;background:#fff} .btn:hover{background:#f8fafc}`;
 
 function pct(n,d){return d===0?0:Math.round((n/d)*100)}
 function money(n){return "₹ "+Number(n||0).toLocaleString("en-IN")}
@@ -14,16 +11,21 @@ function bandColor(s){if(s>=3.5)return BRAND.green; if(s>=3.0)return BRAND.green
 function labelFromScore(s){ if(s<=1) return "Critical/Weak"; if(s===2) return "Needs Work"; return "OK/Strong" }
 function diagnosisFromAvg(a){ if(a<=1) return "Urgent gaps. No stable system."; if(a<=2) return "Exists but weak. Needs control."; if(a<3) return "Satisfactory. Improve consistency."; return "Strong. Maintain and audit." }
 
-export default function ResultsComprehensive(){
+export default function ResultsComprehensiveV2(){
   const [data,setData]=useState(null);
   const [aiText,setAiText]=useState(""); const [loadingAI,setLoadingAI]=useState(false);
+  const [debug,setDebug]=useState({notice:""});
 
   useEffect(()=>{
     (async ()=>{
-      const id=new URLSearchParams(window.location.search).get("assessment_id");
-      const r=id?await fetch(`/api/report-data?assessment_id=${id}`):null;
-      const j=r?await r.json():null;
-      setData(j && !j.demo ? j : demoFallback);
+      try{
+        const id=new URLSearchParams(window.location.search).get("assessment_id");
+        if(!id){ setDebug({notice:"No assessment_id in URL. Showing demo."}); setData(demoFallback); return; }
+        const r=await fetch(`/api/report-data?assessment_id=${id}`);
+        const j=await r.json();
+        if(j?.demo){ setDebug({notice:`Server returned demo (${j.reason||"no reason"})`}); setData(demoFallback); }
+        else setData(j);
+      }catch(e){ setDebug({notice:"Load failed. Showing demo."}); setData(demoFallback); }
     })();
   },[]);
 
@@ -43,18 +45,25 @@ export default function ResultsComprehensive(){
       const res=await fetch("/api/generate-report",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({company:d.company,overall:{overallPct:k.p,grade:k.grade,risk:k.risk,conservative:k.conservative,stretch:k.stretch},categories:d.categories})});
       const j=await res.json(); setAiText(j.text||"");
-    }catch{ setAiText("AI summary not available right now.") }finally{ setLoadingAI(false) }
+    }catch{ setAiText("AI summary not available right now."); }finally{ setLoadingAI(false); }
   }
 
   if(!d||!k) return <div className="min-h-screen grid place-items-center text-slate-600">Loading…</div>;
 
   const donutStyle={background:`conic-gradient(${BRAND.red} 0 ${Math.round((d.distribution.red/k.totalQs)*360)}deg, ${BRAND.amber} 0 ${Math.round(((d.distribution.red+d.distribution.amber)/k.totalQs)*360)}deg, ${BRAND.green} 0 360deg)`};
 
+  // Heat map data: per-category arrays of scores
+  const catMap = d.categories.reduce((m,c)=>{m[c.key]={name:c.name, scores:[]}; return m;}, {});
+  d.questions.forEach(q=>{ if(catMap[q.cat]) catMap[q.cat].scores.push(q.score); });
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
-      <style>{`@media print{.no-print{display:none!important}.page-break{page-break-before:always}} .btn{padding:.375rem .75rem;border:1px solid #e2e8f0;border-radius:.5rem;background:#fff} .btn:hover{background:#f8fafc}`}</style>
+      <style>{`@media print{.no-print{display:none!important}.page-break{page-break-before:always}} ${btnCss}`}</style>
 
-      {/* Header */}
+      {/* Debug notice (never blank) */}
+      {debug.notice && <div className="bg-amber-50 text-amber-700 border border-amber-200 px-4 py-2 text-sm">{debug.notice}</div>}
+
+      {/* Top bar */}
       <div className="mx-auto max-w-6xl px-4 py-6 flex items-center gap-4">
         <img src="/datrix-logo.svg" alt="Datrix" className="h-10"/>
         <div className="text-xl font-bold" style={{color:BRAND.blue}}>Datrix™ Assessment Report</div>
@@ -74,7 +83,7 @@ export default function ResultsComprehensive(){
         </div>
       </div>
 
-      {/* Charts row: Donut + Snapshot + Radar */}
+      {/* Charts: Donut + Snapshot + Radar */}
       <div className="mx-auto max-w-6xl px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <Title>Question Status</Title>
@@ -95,7 +104,7 @@ export default function ResultsComprehensive(){
           </div>
         </Card>
 
-        <Card className="md:col-span-1">
+        <Card>
           <Title>Category Snapshot (Achieved vs Gap)</Title>
           <div className="space-y-3">
             {d.categories.map(c=>{
@@ -122,7 +131,7 @@ export default function ResultsComprehensive(){
         </Card>
       </div>
 
-      {/* Category tiles (clean margins) */}
+      {/* Category tiles */}
       <div className="mx-auto max-w-6xl px-4 mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {d.categories.map(c=>(
           <Card key={c.key}>
@@ -158,7 +167,27 @@ export default function ResultsComprehensive(){
         </Card>
       </div>
 
-      {/* Compact question view with interpretation */}
+      {/* NEW: Category Heat Map */}
+      <div className="mx-auto max-w-6xl px-4 mt-8">
+        <Card>
+          <Title>Category Heat Map (score per question)</Title>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Object.values(catMap).map(({name,scores})=>(
+              <div key={name}>
+                <div className="mb-2 text-sm font-medium">{name}</div>
+                <div className="flex flex-wrap gap-1">
+                  {scores.map((s,i)=>(
+                    <span key={i} title={`Q${i+1}: ${s}/4`} className="inline-block h-3 w-3 rounded"
+                          style={{background:bandColor(s)}}/>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      {/* Compact question view */}
       <div className="mx-auto max-w-6xl px-4 mt-8">
         <Card>
           <Title>Question-Level View (compact)</Title>
@@ -209,40 +238,23 @@ export default function ResultsComprehensive(){
   );
 }
 
-/* UI helpers */
+/* UI bits */
 function Card({children,className}){return <div className={`bg-white rounded-xl shadow-sm border border-slate-200 p-5 ${className||""}`}>{children}</div>}
 function Title({children}){return <div className="text-sm font-semibold mb-3">{children}</div>}
-function Kpi({title,value,sub,pill}){return(
-  <Card>
-    <div className="text-xs text-slate-500">{title}</div>
-    <div className="mt-1 text-xl font-extrabold">{value}</div>
-    {sub&&<div className="mt-1 inline-flex text-[11px] px-2 py-0.5 rounded-full text-white" style={{background:pill||BRAND.blue}}>{sub}</div>}
-  </Card>
-)}
+function Kpi({title,value,sub,pill}){return(<Card><div className="text-xs text-slate-500">{title}</div><div className="mt-1 text-xl font-extrabold">{value}</div>{sub&&<div className="mt-1 inline-flex text-[11px] px-2 py-0.5 rounded-full text-white" style={{background:pill||BRAND.blue}}>{sub}</div>}</Card>)}
 
 /* Simple SVG radar (no library) */
 function Radar({values=[],labels=[]}){
   const N=values.length; const R=80; const CX=120, CY=100;
-  function point(i,scale=1){
-    const a=(-Math.PI/2)+(2*Math.PI*i/N);
-    return [CX+R*scale*Math.cos(a), CY+R*scale*Math.sin(a)];
-  }
+  function point(i,scale=1){ const a=(-Math.PI/2)+(2*Math.PI*i/N); return [CX+R*scale*Math.cos(a), CY+R*scale*Math.sin(a)]; }
   const rings=[0.25,0.5,0.75,1];
   const poly=values.map((v,i)=>point(i,Math.max(0,Math.min(1,v)))).map(([x,y])=>`${x},${y}`).join(" ");
   return (
     <svg viewBox="0 0 240 200" className="w-full">
-      {/* grid rings */}
-      {rings.map((r,idx)=>(
-        <polygon key={idx} points={Array.from({length:N}).map((_,i)=>point(i,r)).map(([x,y])=>`${x},${y}`).join(" ")}
-                 fill="none" stroke="#E5E7EB" strokeWidth="1"/>
-      ))}
-      {/* axes */}
-      {labels.map((lab,i)=>{
-        const [x,y]=point(i,1); return <line key={i} x1={CX} y1={CY} x2={x} y2={y} stroke="#E5E7EB" strokeWidth="1"/>; })}
-      {/* data */}
+      {rings.map((r,i)=>(<polygon key={i} points={Array.from({length:N}).map((_,j)=>point(j,r)).map(([x,y])=>`${x},${y}`).join(" ")} fill="none" stroke="#E5E7EB" strokeWidth="1"/>))}
+      {labels.map((lab,i)=>{const [x,y]=point(i,1); return <line key={i} x1={CX} y1={CY} x2={x} y2={y} stroke="#E5E7EB" strokeWidth="1"/>;})}
       <polygon points={poly} fill="#0B3B8C22" stroke="#0B3B8C" strokeWidth="2"/>
-      {/* labels */}
-      {labels.map((lab,i)=>{const [x,y]=point(i,1.15); return <text key={i} x={x} y={y} textAnchor="middle" fontSize="10" fill="#334155">{lab}</text>;})}
+      {labels.map((lab,i)=>{const a=(-Math.PI/2)+(2*Math.PI*i/N); const dx=Math.cos(a)*92, dy=Math.sin(a)*92; return <text key={i} x={CX+dx} y={CY+dy} textAnchor="middle" fontSize="10" fill="#334155">{lab}</text>;})}
     </svg>
   );
 }
