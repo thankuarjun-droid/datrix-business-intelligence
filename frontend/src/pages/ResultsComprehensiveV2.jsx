@@ -1,673 +1,323 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { 
-  generateComprehensiveReport, 
-  getIndustryBenchmarks, 
-  prepareRadarChartData 
-} from '../services/comprehensiveAIReportService';
-import { supabase } from '../config/supabase';
-import { generateComprehensivePDF } from '../services/pdfGenerationService';
-import { 
-  TrendingUp, Download, Calendar, CheckCircle2, Target, 
-  Zap, Award, BarChart3, AlertCircle, ArrowRight, Sparkles,
-  Building2, DollarSign, Users, Clock, AlertTriangle, CheckCircle,
-  XCircle, Info, ChevronDown, ChevronUp
-} from 'lucide-react';
-import {
-  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  ResponsiveContainer, Legend, Tooltip
-} from 'recharts';
+import React, { useEffect, useMemo, useState } from "react";
 
-const ResultsComprehensiveV2 = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [report, setReport] = useState(null);
-  const [questions, setQuestions] = useState([]);
-  const [error, setError] = useState(null);
-  const [expandedCategories, setExpandedCategories] = useState({});
-  const [hoveredHeatMapItem, setHoveredHeatMapItem] = useState(null);
+const BRAND = {
+  blue: "#0B3B8C",
+  blueDark: "#0A1E44",
+  yellow: "#F5B301",
+  yellowLite: "#FFD666",
+  red: "#EF4444",
+  orange: "#F97316",
+  amber: "#F59E0B",
+  green: "#16A34A",
+  greenLite: "#22C55E",
+};
 
-  const assessmentData = location.state?.assessmentData;
-  const businessContext = location.state?.businessContext;
-  const responses = location.state?.responses;
-  const providedQuestions = location.state?.questions;
+const demo = {
+  company: "Greenway Clothing",
+  assessed_at: "2025-10-22T16:10:00Z",
+  overall: { score: 112, max: 240 },
+  distribution: { red: 18, amber: 26, green: 16 },
+  categories: [
+    { key: "quality", name: "Quality", avg: 2.1, max: 4, top_issue: "RCA loop weak; no inline DHU board" },
+    { key: "production", name: "Production", avg: 2.4, max: 4, top_issue: "Unbalanced lines; no hourly review" },
+    { key: "ie", name: "IE", avg: 1.9, max: 4, top_issue: "No OB/SMV discipline" },
+    { key: "planning", name: "Planning", avg: 2.0, max: 4, top_issue: "Fabric lead time 30–40 days" },
+    { key: "hr", name: "HR & Culture", avg: 2.3, max: 4, top_issue: "No performance review rhythm" },
+    { key: "compliance", name: "Compliance", avg: 3.2, max: 4, top_issue: "Docs OK; audits can tighten" },
+    { key: "costing", name: "Costing/Finance", avg: 1.8, max: 4, top_issue: "Poor piece weight/BOM control" },
+  ],
+  priority_actions: [
+    { title: "Cut rework from 15% → 7%", impact: 4500000, effort: "Medium", owner: "QA Manager", due: "30 days" },
+    { title: "Fix plan → fabric lead time 30 → 20 days", impact: 3000000, effort: "High", owner: "Merch Head", due: "60 days" },
+    { title: "Daily hourly review boards on lines", impact: 1800000, effort: "Low", owner: "Prod Head", due: "7 days" },
+    { title: "OB/SMV update + line balancing", impact: 2200000, effort: "Medium", owner: "IE Lead", due: "21 days" },
+  ],
+  questions: [
+    { id: 1, cat: "hr", text: "Do you manage employee performance and productivity?", score: 2,
+      diagnosis: "Practice exists but weak.", reco: ["Action plan", "Train supervisors", "Monthly review"] },
+    { id: 2, cat: "hr", text: "What is your retention strategy?", score: 2,
+      diagnosis: "Gaps in engagement and growth.", reco: ["Gap analysis", "Plan", "Targets"] },
+    { id: 3, cat: "hr", text: "Workplace safety standards?", score: 3,
+      diagnosis: "OK. Can improve.", reco: ["Benchmark", "Small improvements"] },
+  ],
+};
 
-  useEffect(() => {
-    if (!assessmentData || !businessContext || !responses) {
-      navigate('/');
-      return;
-    }
+function pct(n, d) { return d === 0 ? 0 : Math.round((n / d) * 100); }
+function money(n) { return "₹ " + (n).toLocaleString("en-IN"); }
 
-    loadQuestionsAndGenerateReport();
-  }, [assessmentData, businessContext, responses, navigate]);
+function gradeFromPercent(p) {
+  if (p >= 85) return "A";
+  if (p >= 70) return "B";
+  if (p >= 55) return "C";
+  if (p >= 40) return "D";
+  return "E";
+}
+function riskFromPercent(p) {
+  if (p >= 70) return "Low";
+  if (p >= 55) return "Medium";
+  return "High";
+}
+function bandColor(score) {
+  if (score >= 3.5) return BRAND.green;
+  if (score >= 3.0) return BRAND.greenLite;
+  if (score >= 2.0) return BRAND.amber;
+  if (score >= 1.0) return BRAND.orange;
+  return BRAND.red;
+}
+function savingsEstimate(overallPct, annualBase = 120000000) {
+  const gap = 100 - overallPct;
+  const wastePct = Math.min(0.25 * gap / 100, 0.25);
+  const conservative = Math.round(annualBase * wastePct * 0.35);
+  const stretch = Math.round(annualBase * wastePct * 0.55);
+  return { conservative, stretch };
+}
+async function loadReportData() {
+  return new Promise((r) => setTimeout(() => r(demo), 150));
+}
 
-  const loadQuestionsAndGenerateReport = async () => {
+export default function ResultsComprehensive() {
+  const [data, setData] = useState(null);
+  const [aiText, setAiText] = useState("");
+  const [loadingAI, setLoadingAI] = useState(false);
+
+  useEffect(() => { (async () => setData(await loadReportData()))(); }, []);
+
+  const derived = useMemo(() => {
+    if (!data) return null;
+    const overallPct = pct(data.overall.score, data.overall.max);
+    const grade = gradeFromPercent(overallPct);
+    const risk = riskFromPercent(overallPct);
+    const { conservative, stretch } = savingsEstimate(overallPct);
+    const totalQs = (data.distribution.red + data.distribution.amber + data.distribution.green) || 1;
+    return { overallPct, grade, risk, conservative, stretch, totalQs };
+  }, [data]);
+
+  async function handleGenerateAI() {
     try {
-      setLoading(true);
-
-      let questionsData;
-      
-      if (providedQuestions && providedQuestions.length > 0) {
-        questionsData = providedQuestions;
-      } else {
-        const { data: dbQuestions, error: questionsError } = await supabase
-          .from('assessment_questions')
-          .select(`
-            *,
-            assessment_categories (
-              id,
-              name,
-              description
-            )
-          `)
-          .eq('is_active', true)
-          .order('display_order', { ascending: true });
-
-        if (questionsError) throw questionsError;
-        questionsData = dbQuestions;
-      }
-
-      setQuestions(questionsData);
-
-      const result = await generateComprehensiveReport({
-        assessmentData,
-        businessContext,
-        responses,
-        questions: questionsData
+      setLoadingAI(true); setAiText("");
+      const res = await fetch("/api/generate-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company: data.company, overall: derived, categories: data.categories }),
       });
-
-      if (result.success) {
-        setReport(result.report);
-      } else {
-        setError(result.error);
-        if (result.report) {
-          setReport(result.report);
-        }
-      }
-    } catch (err) {
-      console.error('Error loading questions and generating report:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const toggleCategory = (categoryName) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [categoryName]: !prev[categoryName]
-    }));
-  };
-
-  const scheduleConsultation = () => {
-    window.open('https://calendly.com/navvicorp', '_blank');
-  };
-
-  const claimFreeAudit = () => {
-    window.open('https://consulting.navvicorp.com/', '_blank');
-  };
-
-  const downloadReport = async () => {
-    if (!report) {
-      alert('Report data not available');
-      return;
-    }
-
-    try {
-      const companyName = businessContext?.company_name || 'Your Company';
-      const result = await generateComprehensivePDF(report, companyName);
-      
-      if (result.success) {
-        console.log('PDF generated successfully');
-      } else {
-        alert('Failed to generate PDF: ' + result.error);
-      }
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF report');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Generating your comprehensive report...</p>
-        </div>
-      </div>
-    );
+      const j = await res.json();
+      setAiText(j.text || "AI summary is not available now.");
+    } catch {
+      setAiText("AI summary failed. We will use the basic summary.");
+    } finally { setLoadingAI(false); }
   }
 
-  if (error && !report) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md text-center">
-          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Report Generation Failed</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => navigate('/')}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Go to Home
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (!data || !derived) return <div className="min-h-screen flex items-center justify-center text-slate-600">Loading Report…</div>;
 
-  const aiInsights = report?.ai_insights || {};
-  const heatMapData = report?.heat_map || [];
-  const categoryDeepDives = report?.category_deep_dives || [];
-  const radarData = prepareRadarChartData(report?.assessment_summary?.category_scores || {});
-  const benchmarks = getIndustryBenchmarks();
-  const percentage = parseFloat(report?.assessment_summary?.percentage || 0);
-
-  // Get user name from business context or assessment data
-  const userName = businessContext?.user_name || 'Valued Client';
-  const companyName = businessContext?.company_name || 'Your Company';
+  const donutStyle = {
+    background: `conic-gradient(${BRAND.red} 0 ${Math.round((data.distribution.red/derived.totalQs)*360)}deg, ${BRAND.amber} 0 ${Math.round(((data.distribution.red+data.distribution.amber)/derived.totalQs)*360)}deg, ${BRAND.green} 0 360deg)`,
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        
-        {/* Header with Personalization */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-2xl p-8 mb-8 text-white">
-          <div className="flex items-center gap-3 mb-4">
-            <Sparkles className="h-10 w-10" />
-            <div>
-              <h1 className="text-4xl font-bold">Your Comprehensive Business Intelligence Report</h1>
-              <p className="text-blue-100 text-lg mt-1">Prepared for {userName} • {companyName}</p>
-            </div>
-          </div>
-          <p className="text-blue-100 text-lg mb-6">AI-Powered Deep Analysis with Question-Level Insights</p>
-          
-          {/* Key Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <p className="text-blue-100 text-sm mb-1">Overall Score</p>
-              <p className="text-4xl font-bold">{percentage.toFixed(1)}%</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <p className="text-blue-100 text-sm mb-1">Performance Grade</p>
-              <p className="text-4xl font-bold">{report?.assessment_summary?.overall_grade || 'N/A'}</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Building2 className="h-4 w-4 text-blue-100" />
-                <p className="text-blue-100 text-sm">Sewing Machines</p>
-              </div>
-              <p className="text-3xl font-bold">{businessContext?.sewing_machines || 0}</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <DollarSign className="h-4 w-4 text-blue-100" />
-                <p className="text-blue-100 text-sm">Annual Turnover</p>
-              </div>
-              <p className="text-2xl font-bold">
-                {businessContext?.turnover_currency} {parseInt(businessContext?.annual_turnover || 0).toLocaleString()}
-              </p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-slate-50 text-slate-800">
+      <style>{`@media print { .no-print { display: none !important; } .page-break { page-break-before: always; } }`}</style>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-wrap gap-4 mt-6">
-            <button
-              onClick={downloadReport}
-              className="flex items-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-semibold shadow-lg"
-            >
-              <Download className="h-5 w-5" />
-              Download PDF Report
-            </button>
-            <button
-              onClick={scheduleConsultation}
-              className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-semibold shadow-lg"
-            >
-              <Calendar className="h-5 w-5" />
-              Book Your Free Consultation
-            </button>
-            <button
-              onClick={claimFreeAudit}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors font-semibold shadow-lg"
-            >
-              <Award className="h-5 w-5" />
-              Claim Your Free Audit
-            </button>
+      <div className="mx-auto max-w-6xl px-4 py-6 flex items-center gap-4">
+        <img src="/datrix-logo.svg" alt="Datrix logo" className="h-10 w-auto" />
+        <div className="text-xl font-semibold" style={{color: BRAND.blue}}>Datrix™ Assessment Report</div>
+        <div className="ml-auto no-print flex gap-2">
+          <button onClick={() => window.print()} className="px-3 py-1.5 rounded-md bg-white border border-slate-200 shadow-sm hover:bg-slate-50">Print / PDF</button>
+          <button onClick={() => navigator.clipboard.writeText(window.location.href)} className="px-3 py-1.5 rounded-md bg-white border border-slate-200 shadow-sm hover:bg-slate-50">Copy Link</button>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <KpiCard title="Overall Score" value={`${data.overall.score} / ${data.overall.max}`} sub={`${derived.overallPct}%`} />
+          <KpiCard title="Grade" value={derived.grade} pillColor={derived.grade === "A" ? BRAND.green : derived.grade === "B" ? BRAND.greenLite : derived.grade === "C" ? BRAND.amber : BRAND.red} sub={`${derived.risk} Risk`} />
+          <KpiCard title="Savings (90 days)" value={`${money(derived.conservative)} – ${money(derived.stretch)}`} sub="Potential range" />
+          <KpiCard title="Assessed On" value={new Date(data.assessed_at).toLocaleString()} sub={data.company} />
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <div className="text-sm font-semibold mb-3">Question Status</div>
+          <div className="flex items-center gap-6">
+            <div className="relative h-36 w-36 rounded-full" style={donutStyle}>
+              <div className="absolute inset-4 bg-white rounded-full flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-xl font-bold">{derived.totalQs}</div>
+                  <div className="text-xs text-slate-500">Questions</div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <Legend color={BRAND.red} label="Critical/Weak" value={data.distribution.red}/>
+              <Legend color={BRAND.amber} label="Needs Work" value={data.distribution.amber}/>
+              <Legend color={BRAND.green} label="OK/Strong" value={data.distribution.green}/>
+            </div>
           </div>
         </div>
 
-        {/* Executive Summary */}
-        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Sparkles className="h-7 w-7 text-purple-600" />
-            <h2 className="text-3xl font-bold text-gray-900">Executive Summary</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 md:col-span-2">
+          <div className="text-sm font-semibold mb-3">Category Snapshot</div>
+          <div className="space-y-3">
+            {data.categories.map((c) => (
+              <div key={c.key} className="grid grid-cols-12 gap-2 items-center">
+                <div className="col-span-3 md:col-span-2 text-sm font-medium">{c.name}</div>
+                <div className="col-span-7 md:col-span-9">
+                  <div className="h-2 rounded bg-slate-100">
+                    <div className="h-2 rounded" style={{ width: `${(c.avg / c.max) * 100}%`, backgroundColor: bandColor(c.avg) }}></div>
+                  </div>
+                </div>
+                <div className="col-span-2 md:col-span-1 text-right text-xs text-slate-500">{c.avg.toFixed(1)} / {c.max}</div>
+              </div>
+            ))}
           </div>
-          <div>
-            <p className="text-lg text-gray-700 leading-relaxed mb-4 whitespace-pre-line">
-              {aiInsights.executive_summary?.overview}
-            </p>
-            <div className="bg-purple-50 border-l-4 border-purple-600 p-4 rounded-r-lg mb-4">
-              <p className="font-semibold text-purple-900 mb-2">Critical Insight:</p>
-              <p className="text-purple-800">{aiInsights.executive_summary?.critical_insight}</p>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {data.categories.map((c) => (
+          <div key={c.key} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            <div className="flex items-center justify-between">
+              <div className="font-semibold">{c.name}</div>
+              <span className="px-2 py-0.5 rounded text-xs text-white" style={{ backgroundColor: bandColor(c.avg) }}>
+                {c.avg.toFixed(1)} / {c.max}
+              </span>
             </div>
-            {aiInsights.executive_summary?.key_findings && (
-              <div className="bg-blue-50 rounded-lg p-4">
-                <p className="font-semibold text-blue-900 mb-2">Key Findings:</p>
-                <ul className="list-disc list-inside space-y-2 text-blue-800">
-                  {aiInsights.executive_summary.key_findings.map((finding, i) => (
-                    <li key={i} className="leading-relaxed">{finding}</li>
-                  ))}
+            <div className="mt-2 text-xs text-slate-500">Top issue</div>
+            <div className="text-sm">{c.top_issue}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 mt-8">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold">Top Actions (Impact first)</div>
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-slate-500">
+                  <th className="py-2 pr-3">Action</th>
+                  <th className="py-2 pr-3">Impact</th>
+                  <th className="py-2 pr-3">Effort</th>
+                  <th className="py-2 pr-3">Owner</th>
+                  <th className="py-2">Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.priority_actions.slice().sort((a,b)=>b.impact-a.impact).map((a, i) => (
+                  <tr key={i} className="border-t border-slate-100">
+                    <td className="py-2 pr-3">{a.title}</td>
+                    <td className="py-2 pr-3 font-medium">{money(a.impact)}</td>
+                    <td className="py-2 pr-3">{a.effort}</td>
+                    <td className="py-2 pr-3">{a.owner}</td>
+                    <td className="py-2">{a.due}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 mt-8 space-y-4">
+        {data.categories.map((c) => (
+          <Accordion key={c.key} title={`${c.name} – Diagnosis & Actions`} defaultOpen={false}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <InfoCard title="Diagnosis">
+                <ul className="list-disc ml-4 text-sm">
+                  <li>{c.top_issue}</li>
+                  <li>Process exists but not stable.</li>
+                  <li>Improve review rhythm.</li>
                 </ul>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Compact Heat Map */}
-        {heatMapData.length > 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-            <div className="flex items-center gap-3 mb-6">
-              <BarChart3 className="h-7 w-7 text-orange-600" />
-              <h2 className="text-3xl font-bold text-gray-900">Performance Heat Map</h2>
+              </InfoCard>
+              <InfoCard title="Recommendations">
+                <ul className="list-disc ml-4 text-sm">
+                  <li>Define SOP and teach team.</li>
+                  <li>Weekly review with owner.</li>
+                  <li>Measure and display results.</li>
+                </ul>
+              </InfoCard>
+              <InfoCard title="Target (30–60–90 days)">
+                <ul className="list-disc ml-4 text-sm">
+                  <li>30d: Start; 60d: Stabilize; 90d: Audit.</li>
+                  <li>Assign owner and budget.</li>
+                </ul>
+              </InfoCard>
             </div>
-            <p className="text-gray-600 mb-6">
-              All {heatMapData.length} questions at a glance. Hover over each square to see details.
-            </p>
-            
-            <div className="grid grid-cols-12 gap-1.5">
-              {heatMapData.map((item, index) => {
-                const isHovered = hoveredHeatMapItem?.category === item.category;
-                return (
-                  <div
-                    key={index}
-                    className={`aspect-square rounded flex items-center justify-center text-white text-xs font-bold shadow-sm transition-all duration-200 cursor-pointer ${
-                      isHovered ? 'scale-110 shadow-lg ring-2 ring-blue-400 z-10' : 'hover:scale-105'
-                    }`}
-                    style={{ backgroundColor: item.color }}
-                    title={`Q${item.question_number}: ${item.category} - ${item.performance_level}`}
-                    onMouseEnter={() => setHoveredHeatMapItem(item)}
-                    onMouseLeave={() => setHoveredHeatMapItem(null)}
-                  >
-                    {item.question_number}
-                  </div>
-                );
-              })}
-            </div>
+          </Accordion>
+        ))}
+      </div>
 
-            <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-green-500"></div>
-                <span className="text-sm text-gray-700">Excellent</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-yellow-500"></div>
-                <span className="text-sm text-gray-700">Needs Improvement</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-red-500"></div>
-                <span className="text-sm text-gray-700">Critical</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-gray-400"></div>
-                <span className="text-sm text-gray-700">N/A</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Radar Chart */}
-        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <TrendingUp className="h-7 w-7 text-blue-600" />
-            <h2 className="text-3xl font-bold text-gray-900">Performance Radar Analysis</h2>
-          </div>
-          <p className="text-gray-600 mb-6">
-            Compare your performance across all categories against industry benchmarks and top performers
-          </p>
-
-          <ResponsiveContainer width="100%" height={400}>
-            <RadarChart data={radarData}>
-              <PolarGrid stroke="#e5e7eb" />
-              <PolarAngleAxis 
-                dataKey="category" 
-                tick={{ fill: '#4b5563', fontSize: 12 }}
-                tickLine={false}
-              />
-              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#9ca3af' }} />
-              <Radar
-                name="Your Score"
-                dataKey="yourScore"
-                stroke="#3b82f6"
-                fill="#3b82f6"
-                fillOpacity={0.5}
-                strokeWidth={2}
-              />
-              <Radar
-                name="Industry Average"
-                dataKey="industryAverage"
-                stroke="#fbbf24"
-                fill="#fbbf24"
-                fillOpacity={0.3}
-                strokeWidth={2}
-              />
-              <Radar
-                name="Top Performers"
-                dataKey="topPerformers"
-                stroke="#10b981"
-                fill="#10b981"
-                fillOpacity={0.2}
-                strokeWidth={2}
-              />
-              <Legend />
-              <Tooltip />
-            </RadarChart>
-          </ResponsiveContainer>
-
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-blue-50 rounded-lg p-4 text-center">
-              <p className="text-3xl font-bold text-blue-600">{percentage.toFixed(1)}%</p>
-              <p className="text-sm text-blue-800 mt-1">Your Average</p>
-            </div>
-            <div className="bg-yellow-50 rounded-lg p-4 text-center">
-              <p className="text-3xl font-bold text-yellow-600">{benchmarks.industryAverage}%</p>
-              <p className="text-sm text-yellow-800 mt-1">Industry Average</p>
-            </div>
-            <div className="bg-green-50 rounded-lg p-4 text-center">
-              <p className="text-3xl font-bold text-green-600">{benchmarks.topPerformers}+</p>
-              <p className="text-sm text-green-800 mt-1">Top Performers</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Wins */}
-        {aiInsights.quick_wins && aiInsights.quick_wins.length > 0 && (
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-lg p-8 mb-8 border border-green-200">
-            <div className="flex items-center gap-3 mb-6">
-              <Zap className="h-7 w-7 text-green-600" />
-              <h2 className="text-3xl font-bold text-gray-900">Quick Wins - Start Here!</h2>
-            </div>
-            <p className="text-gray-700 mb-6">
-              These high-impact, low-effort actions can deliver immediate results:
-            </p>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              {aiInsights.quick_wins.map((win, index) => (
-                <div key={index} className="bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-shadow">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
-                        {index + 1}
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-2">{win.action}</h3>
-                      {win.expected_impact && (
-                        <p className="text-sm text-gray-600 mb-2">{win.expected_impact}</p>
-                      )}
-                      <div className="flex flex-wrap gap-2 text-xs">
-                        <span className={`px-2 py-1 rounded ${
-                          win.impact === 'High' ? 'bg-green-100 text-green-800' :
-                          win.impact === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          Impact: {win.impact}
-                        </span>
-                        <span className={`px-2 py-1 rounded ${
-                          win.effort === 'Low' ? 'bg-green-100 text-green-800' :
-                          win.effort === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          Effort: {win.effort}
-                        </span>
-                        <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">
-                          {win.timeline}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Collapsible Category Deep Dives */}
-        {categoryDeepDives.map((categoryData, catIndex) => {
-          const isExpanded = expandedCategories[categoryData.name];
-          const categoryPercentage = parseFloat(
-            report.assessment_summary.category_scores[categoryData.name]?.percentage || 0
-          );
-
-          return (
-            <div key={catIndex} className="bg-white rounded-xl shadow-lg mb-6 overflow-hidden">
-              {/* Category Header - Always Visible */}
-              <div
-                className="p-6 cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => toggleCategory(categoryData.name)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 flex-1">
-                    <Target className="h-6 w-6 text-indigo-600 flex-shrink-0" />
-                    <div className="flex-1">
-                      <h2 className="text-2xl font-bold text-gray-900">{categoryData.name}</h2>
-                      {categoryData.summary.current_state && (
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                          {categoryData.summary.current_state}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-blue-600">
-                        {categoryPercentage.toFixed(1)}%
-                      </div>
-                      <span className={`text-xs px-3 py-1 rounded-full ${
-                        categoryData.summary.priority_level === 'Critical' ? 'bg-red-100 text-red-800' :
-                        categoryData.summary.priority_level === 'High' ? 'bg-orange-100 text-orange-800' :
-                        categoryData.summary.priority_level === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {categoryData.summary.priority_level} Priority
-                      </span>
-                    </div>
-                    {isExpanded ? (
-                      <ChevronUp className="h-6 w-6 text-gray-400" />
-                    ) : (
-                      <ChevronDown className="h-6 w-6 text-gray-400" />
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Expandable Content */}
-              {isExpanded && (
-                <div className="px-6 pb-6 border-t border-gray-200">
-                  {/* Category Insights */}
-                  {categoryData.summary.recommendations && categoryData.summary.recommendations.length > 0 && (
-                    <div className="bg-blue-50 rounded-lg p-4 mb-6 mt-6">
-                      <p className="font-semibold text-blue-900 mb-2">Recommendations:</p>
-                      <ul className="list-disc list-inside space-y-1 text-blue-800 text-sm">
-                        {categoryData.summary.recommendations.map((rec, i) => (
-                          <li key={i}>{rec}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Question-Level Analysis */}
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-bold text-gray-900 mb-3">
-                      Question-Level Analysis ({categoryData.questions.length} questions)
-                    </h3>
-                    {categoryData.questions.map((qa, qIndex) => (
-                      <div key={qIndex} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start gap-3">
-                          {/* Performance Indicator */}
-                          <div className="flex-shrink-0">
-                            {qa.performance_level === 'Excellent' && (
-                              <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                                <CheckCircle className="h-6 w-6 text-white" />
-                              </div>
-                            )}
-                            {qa.performance_level === 'Good' && (
-                              <div className="w-10 h-10 bg-green-400 rounded-lg flex items-center justify-center">
-                                <CheckCircle2 className="h-6 w-6 text-white" />
-                              </div>
-                            )}
-                            {qa.performance_level === 'Needs Improvement' && (
-                              <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
-                                <AlertTriangle className="h-6 w-6 text-white" />
-                              </div>
-                            )}
-                            {qa.performance_level === 'Critical' && (
-                              <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-                                <XCircle className="h-6 w-6 text-white" />
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Question Details */}
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between mb-2">
-                              <h4 className="font-semibold text-gray-900 flex-1 text-sm">
-                                {qa.question_text}
-                              </h4>
-                              <span className="ml-4 text-xs font-medium text-gray-600">
-                                {qa.score}/{qa.max_score}
-                              </span>
-                            </div>
-
-                            <div className="bg-gray-50 rounded p-3 mb-2">
-                              <p className="text-xs text-gray-600 mb-1">Your Response:</p>
-                              <p className="font-medium text-gray-900 text-sm">{qa.response_text}</p>
-                            </div>
-
-                            {qa.diagnosis && (
-                              <div className="bg-blue-50 rounded p-3 mb-2">
-                                <p className="text-xs text-blue-600 mb-1">Diagnosis:</p>
-                                <p className="text-sm text-blue-900">{qa.diagnosis}</p>
-                              </div>
-                            )}
-
-                            {qa.recommendations && qa.recommendations.length > 0 && (
-                              <div className="bg-green-50 rounded p-3">
-                                <p className="text-xs text-green-600 mb-1">Recommendations:</p>
-                                <ul className="list-disc list-inside space-y-0.5 text-sm text-green-900">
-                                  {qa.recommendations.map((rec, i) => (
-                                    <li key={i}>{rec}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* Consultation CTA */}
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl shadow-2xl p-8 text-white">
-          <h2 className="text-4xl font-bold mb-4">Save ₹8+ Crores Annually: Eliminate Factory Inefficiencies in 90 Days</h2>
-          <p className="text-xl mb-6">
-            Stop losing money to operational inefficiencies. Get your complete transformation package with our proven Ultimate Factory Transformation Mastery.
-          </p>
-          
-          <div className="bg-yellow-400 text-gray-900 font-bold text-xl px-6 py-3 rounded-lg inline-block mb-8">
-            🛡️ 50% Money Back Guarantee if we don't deliver 15% savings in 90 days!
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8 mb-8">
-            <div>
-              <h3 className="text-2xl font-bold mb-4">Our Scientific 3-Phase Transformation:</h3>
-              <div className="space-y-3">
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                  <p className="font-bold">Crisis Response (2-3 months)</p>
-                  <p className="text-sm text-orange-100">30% Loss Reduction</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                  <p className="font-bold">System Enhancement (3-5 months)</p>
-                  <p className="text-sm text-orange-100">40% Efficiency Boost</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                  <p className="font-bold">Excellence Institutionalization (8-10 months)</p>
-                  <p className="text-sm text-orange-100">25% Cost Reduction</p>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-2xl font-bold mb-4">Proven Results:</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-6 w-6 flex-shrink-0" />
-                  <p>10+ Factories Transformed</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-6 w-6 flex-shrink-0" />
-                  <p>₹500+ Cr Total Savings</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-6 w-6 flex-shrink-0" />
-                  <p>Cut Defects by 7%, Slash Rework by 15%</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-6 w-6 flex-shrink-0" />
-                  <p>5000%+ ROI in 12 Months</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-6 w-6 flex-shrink-0" />
-                  <p>Visible results within 30 days</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-4">
-            <button
-              onClick={claimFreeAudit}
-              className="flex items-center gap-2 px-8 py-4 bg-yellow-400 text-gray-900 rounded-lg hover:bg-yellow-300 transition-colors font-bold text-lg shadow-lg"
-            >
-              <Award className="h-6 w-6" />
-              Claim Your Free Factory Audit →
+      <div className="mx-auto max-w-6xl px-4 mt-8">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold">Personalized Summary</div>
+            <button onClick={handleGenerateAI} disabled={loadingAI}
+              className="no-print px-3 py-1.5 rounded-md text-white"
+              style={{backgroundColor: BRAND.blue}}>
+              {loadingAI ? "Generating…" : "Generate with AI"}
             </button>
           </div>
-
-          <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
-              <span>Free</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
-              <span>45 Min</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
-              <span>No Risk - Expert-led problem analysis</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
-              <span>Custom recommendations</span>
-            </div>
+          <div className="mt-3 text-sm whitespace-pre-line">
+            {aiText || "Click “Generate with AI” to create a short MD-friendly summary and next steps."}
           </div>
-
-          <p className="mt-6 text-sm">
-            📞 +91-989-44-66-715 | ✉️ arjunm@navvicorp.com | 🌐 Navvi Corp - Tirupur's Factory Transformation Experts
-          </p>
         </div>
+      </div>
 
+      <div className="mx-auto max-w-6xl px-4 my-10">
+        <div className="rounded-2xl p-6 text-white" style={{background: "linear-gradient(90deg, #F5B301, #FF7E3E)"}}>
+          <div className="text-2xl font-extrabold mb-2">Save ₹8+ Crores Annually — Start in 90 Days</div>
+          <div className="text-sm opacity-95">Free 45-min audit • No risk • Custom plan</div>
+          <div className="mt-4 flex gap-3">
+            <a href="mailto:arjunm@navvicorp.com" className="px-4 py-2 bg-black/20 rounded-md backdrop-blur">Book a Call</a>
+            <button onClick={()=>window.print()} className="px-4 py-2 bg-black/20 rounded-md backdrop-blur">Download PDF</button>
+          </div>
+        </div>
       </div>
     </div>
   );
-};
+}
 
-export default ResultsComprehensiveV2;
-
+function KpiCard({ title, value, sub, pillColor }) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+      <div className="text-xs text-slate-500">{title}</div>
+      <div className="mt-1 text-xl font-extrabold">{value}</div>
+      {sub && (
+        <div className="mt-1 inline-flex text-[11px] px-2 py-0.5 rounded-full text-white" style={{backgroundColor: pillColor || BRAND.blue}}>
+          {sub}
+        </div>
+      )}
+    </div>
+  );
+}
+function Legend({ color, label, value }) {
+  return (
+    <div className="flex items-center gap-2 mb-1">
+      <span className="h-3 w-3 rounded" style={{backgroundColor: color}}></span>
+      <span className="text-sm">{label}</span>
+      <span className="text-xs text-slate-500 ml-1">({value})</span>
+    </div>
+  );
+}
+function Accordion({ title, children, defaultOpen=false }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+      <button onClick={()=>setOpen(!open)} className="w-full text-left px-5 py-3 flex items-center justify-between">
+        <div className="text-sm font-semibold">{title}</div>
+        <span className="text-slate-500">{open ? "−" : "+"}</span>
+      </button>
+      {open && <div className="px-5 pb-5">{children}</div>}
+    </div>
+  );
+}
+function InfoCard({ title, children }) {
+  return (
+    <div className="border border-slate-200 rounded-lg p-3">
+      <div className="text-xs text-slate-500 mb-1">{title}</div>
+      {children}
+    </div>
+  );
+}
